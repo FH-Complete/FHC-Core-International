@@ -10,7 +10,7 @@ function form_status(cell, formatterParams)
 {
 	var massnahme = cell.getData().massnahme_zuordnung_id;
 	var status = cell.getData().massnahme_status_kurzbz;
-	console.log(status);
+
 	if (status !== 'confirmed' && status !== 'declined')
 	{
 		var div = $("<div></div>");

@@ -11,6 +11,7 @@ $this->load->view(
 		'tabulator' => true,
 		'ajaxlib' => true,
 		'dialoglib' => true,
+		'navigationwidget' => true,
 		'phrases' => array(
 			'ui' => array(
 				'global',
@@ -28,6 +29,7 @@ $this->load->view(
 ?>
 <body>
 <div id="wrapper">
+	<?php echo $this->widgetlib->widget('NavigationWidget'); ?>
 	<div id="page-wrapper">
 		<div class="container-fluid">
 			<div class="row">

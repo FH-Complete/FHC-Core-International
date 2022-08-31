@@ -156,8 +156,6 @@ class Massnahmen extends Auth_Controller
 
 	public function showMassnahme()
 	{
-		$this->_setNavigationMenuShowDetails();
-
 		$massnahme_id = $this->_ci->input->get('massnahme_id');
 
 		if (!is_numeric($massnahme_id))
@@ -180,29 +178,5 @@ class Massnahmen extends Auth_Controller
 	{
 		$this->_uid = getAuthUID();
 		if (!$this->_uid) show_error('User authentification failed');
-	}
-
-	private function _setNavigationMenuShowDetails()
-	{
-		$this->load->library('NavigationLib', array('navigation_page' => 'extensions/FHC-Core-International/Massnahmen/showMassnahme'));
-
-		$link = site_url('extensions/FHC-Core-International/Massnahmen');
-
-		$this->navigationlib->setSessionMenu(
-			array(
-				'back' => $this->navigationlib->oneLevel(
-					'Zurück',	// description
-					$link,			// link
-					array(),		// children
-					'angle-left',	// icon
-					true,			// expand
-					null, 			// subscriptDescription
-					null, 			// subscriptLinkClass
-					null, 			// subscriptLinkValue
-					'', 			// target
-					1 				// sort
-				)
-			)
-		);
 	}
 }

@@ -6,3 +6,10 @@ $config['navigation_header']['*']['Lehre']['children']['international'] = array(
 	'expand' => false,
 	'requiredPermissions' => 'extension/internationalReview:rw'
 );
+
+$config['navigation_header']['*']['Lehre']['children']['internationalmassnahme'] = array(
+	'link' => site_url('extensions/FHC-Core-International/massnahmen'),
+	'description' => 'Internationalisierung - Massnahmen',
+	'expand' => false,
+	'requiredPermissions' => 'extension/internationalMassnahme:rw'
+);

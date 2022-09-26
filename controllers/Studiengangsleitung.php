@@ -18,7 +18,8 @@ class Studiengangsleitung extends Auth_Controller
 				'index' => self::BERECHTIGUNG_KURZBZ .':rw',
 				'setStatus' => self::BERECHTIGUNG_KURZBZ .':rw',
 				'download' => self::BERECHTIGUNG_KURZBZ.':rw',
-				'getAktStudiensemester' => self::BERECHTIGUNG_KURZBZ.':rw'
+				'getAktStudiensemester' => self::BERECHTIGUNG_KURZBZ.':rw',
+				'getStudents' => self::BERECHTIGUNG_KURZBZ.':rw'
 			)
 		);
 
@@ -63,39 +64,19 @@ class Studiengangsleitung extends Auth_Controller
 	{
 		$massnahmeZuordnungPost = $this->_ci->input->post('massnahme_id');
 		$statusPost = $this->_ci->input->post('status');
+		$absagePost = $this->_ci->input->post('absagegrund');
 
 		if (isEmptyString($massnahmeZuordnungPost))
 			$this->terminateWithJsonError($this->_ci->p->t('ui', 'errorFelderFehlen'));
+
+		if (isEmptyString($absagePost))
+			$absagePost = null;
 
 		$massnahmeZuordnung = $this->_checkMassnahmenZuordnung($massnahmeZuordnungPost);
 
 		$status = $this->checkStatus($massnahmeZuordnung->massnahme_status_kurzbz, $statusPost);
 
 		$statusKurz = $status->massnahme_status_kurzbz;
-
-		if (($statusKurz === 'accepted' || $statusKurz === 'declined') && !is_null($massnahmeZuordnung->dms_id))
-		{
-			$updateZuordnung = $this->_ci->InternatmassnahmezuordnungModel->update(
-				array('massnahme_zuordnung_id' => $massnahmeZuordnung->massnahme_zuordnung_id),
-				array
-				(
-					'dms_id' => null,
-					'updateamum' => date('Y-m-d H:i:s'),
-					'updatevon' => $this->_uid
-				)
-			);
-
-			if (isError($updateZuordnung))
-				$this->terminateWithJsonError(getError($updateZuordnung));
-
-			$deleteFile = $this->_ci->dmslib->delete($massnahmeZuordnung->person_id, $massnahmeZuordnung->dms_id);
-
-			if (isError($deleteFile))
-				$this->terminateWithJsonError(getError($deleteFile));
-
-			//wird benötigt um die Anzeige im Tabulator korrekt darzustellen
-			$massnahmeZuordnung->dms_id = null;
-		}
 
 		$insertStatus = $this->_ci->InternatmassnahmezuordnungstatusModel->insert(
 			array(
@@ -110,9 +91,24 @@ class Studiengangsleitung extends Auth_Controller
 		if (isError($insertStatus))
 			$this->terminateWithJsonError(getError($insertStatus));
 
+		if ($statusPost === 'declined' && !isEmptyString($absagePost))
+		{
+			$updateStatus = $this->_ci->InternatmassnahmezuordnungModel->update(
+				array('massnahme_zuordnung_id' => $massnahmeZuordnung->massnahme_zuordnung_id),
+				array
+				(
+					'anmerkung_stgl' => $absagePost,
+					'updateamum' => date('Y-m-d H:i:s'),
+					'updatevon' => $this->_uid
+				)
+			);
+
+			if (isError($updateStatus))
+				$this->terminateWithJsonError(getError($updateStatus));
+		};
 		$language = getUserLanguage() == 'German' ? 0 : 1;
 
-		$this->outputJsonSuccess(array('massnahme' => $massnahmeZuordnung->massnahme_zuordnung_id, 'status' => $statusKurz, 'dms_id' => $massnahmeZuordnung->dms_id, 'status_bezeichnung' => $status->bezeichnung_mehrsprachig[$language]));
+		$this->outputJsonSuccess(array('massnahme' => $massnahmeZuordnung->massnahme_zuordnung_id, 'status' => $statusKurz, 'dms_id' => $massnahmeZuordnung->dms_id, 'status_bezeichnung' => $status->bezeichnung_mehrsprachig[$language], 'anmerkung_stgl' => $absagePost));
 	}
 
 	public function download()
@@ -139,6 +135,55 @@ class Studiengangsleitung extends Auth_Controller
 		$studiensemester = getData($this->_ci->StudiensemesterModel->getLastOrAktSemester())[0]->studiensemester_kurzbz;
 
 		$this->outputJsonSuccess($studiensemester);
+	}
+
+	public function getStudents()
+	{
+		$status = $this->_ci->input->get('status');
+		$ects = $this->_ci->input->get('ects');
+		$more = $this->_ci->input->get('more') === 'true';
+		$exists = $this->_ci->input->get('exists') === 'true';
+
+		$oeKurzbz = $this->_getOes();
+
+		$result = $this->_ci->InternatmassnahmezuordnungModel->getStudentUIDs($oeKurzbz);
+
+		$result = getData($result);
+
+		$students = [];
+		foreach ($result as $res)
+		{
+			if (!array_search($res->massnahme_status_kurzbz, $status))
+			{
+				if ($more && !$exists)
+					$students[$res->student_uid] = $ects;
+				else if (!$more && !$exists)
+					$students[$res->student_uid] = 1;
+			}
+			if (in_array($res->massnahme_status_kurzbz, $status))
+			{
+				if (!isset($students[$res->student_uid]))
+					$students[$res->student_uid] = (int)$res->sum;
+				else
+					$students[$res->student_uid] += (int)$res->sum;
+			}
+		}
+
+		$filterStudent = [];
+		foreach ($students as $student => $ect)
+		{
+			if ($more && $ect >= $ects)
+				$filterStudent[] = $student;
+			elseif (!$more && $ect < $ects)
+				$filterStudent[] = $student;
+		}
+
+		if (!is_null($filterStudent))
+		{
+			$this->outputJsonSuccess($filterStudent);
+		}
+		else
+			$this->outputJsonSuccess(null);
 	}
 
 	private function _checkMassnahmenZuordnung($massnahmeZuordnungPost)
@@ -173,7 +218,8 @@ class Studiengangsleitung extends Auth_Controller
 			($newStatusKurz === 'declined' && !in_array($currStatus, array('planned', 'performed', 'accepted'))) ||
 			($newStatusKurz === 'accepted' && !in_array($currStatus, array('planned', 'performed', 'confirmed'))) ||
 			($newStatusKurz === 'confirmed' && $currStatus !== 'performed') ||
-			(!in_array($newStatusKurz, array('accepted', 'confirmed', 'declined'))))
+			($newStatusKurz === 'performed' && $currStatus !== 'confirmed') ||
+			(!in_array($newStatusKurz, array('accepted', 'confirmed', 'declined', 'performed'))))
 		{
 			$this->terminateWithJsonError($this->_ci->p->t('ui', 'fehlerBeimSpeichern'));
 		}

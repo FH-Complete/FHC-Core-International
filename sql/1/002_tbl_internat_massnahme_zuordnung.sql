@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS extension.tbl_internat_massnahme_zuordnung
     prestudent_id                       integer,
     massnahme_id                        bigint not null,
     anmerkung                           text,
+    anmerkung_stgl                      text,
     studiensemester_kurzbz              varchar(32),
     dms_id                              integer,
     insertamum                          timestamp without time zone default now(),

@@ -18,7 +18,10 @@ $this->load->view(
 		'customJSs' => array(
 			'public/extensions/FHC-Core-International/js/student.js',
 			'public/js/bootstrapper.js',
-		)
+		),
+		'customCSSs' => array(
+			'public/extensions/FHC-Core-International/css/student.css'
+		),
 	)
 );
 ?>
@@ -30,7 +33,7 @@ $this->load->view(
 					<div class="col-xs-12">
 						<h3 class="page-header">
 							<?php echo $this->p->t('international', 'internationalskills'); ?>
-							<i class="fa fa-info showInfoText text-right"></i>
+							<i class="fa fa-info-circle showInfoText text-right"></i>
 						</h3>
 					</div>
 				</div>

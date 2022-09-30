@@ -15,11 +15,11 @@ class InternationalJob extends JOB_Controller
 		$this->load->model('organisation/Studiengang_model', 'StudiengangModel');
 	}
 
-	public function sendMail()
+	public function sendMail($days = 7)
 	{
 		$this->logInfo('Start International Job');
 
-		$massnahmen = $this->_getStudentsWithMassnahme();
+		$massnahmen = $this->_getStudentsWithMassnahme($days);
 
 		if (!hasData($massnahmen))
 		{
@@ -61,7 +61,7 @@ class InternationalJob extends JOB_Controller
 		$this->logInfo('End International Job');
 	}
 
-	private function _getStudentsWithMassnahme()
+	private function _getStudentsWithMassnahme($days)
 	{
 		$language = getUserLanguage() == 'German' ? 0 : 1;
 
@@ -90,7 +90,7 @@ class InternationalJob extends JOB_Controller
 				JOIN tbl_person person ON prestudent.person_id = person.person_id
 				JOIN extension.tbl_internat_massnahme_status status USING (massnahme_status_kurzbz)
 				JOIN tbl_studiengang studiengang on prestudent.studiengang_kz = studiengang.studiengang_kz
-			WHERE zstatus.insertamum::date > (NOW() - INTERVAL '7 DAYS')::DATE
+			WHERE zstatus.insertamum::date > (NOW() - INTERVAL '". $days ." DAYS')::DATE
 				AND zstatus.insertvon = student.student_uid
 		";
 

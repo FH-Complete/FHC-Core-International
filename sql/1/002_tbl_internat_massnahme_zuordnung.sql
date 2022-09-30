@@ -55,4 +55,4 @@ END $$;
 
 GRANT SELECT, UPDATE, INSERT, DELETE ON TABLE extension.tbl_internat_massnahme_zuordnung TO vilesci;
 GRANT SELECT, UPDATE, INSERT, DELETE ON TABLE extension.tbl_internat_massnahme_zuordnung TO fhcomplete;
-GRANT SELECT, UPDATE, INSERT ON TABLE extension.tbl_internat_massnahme_zuordnung TO web;
+GRANT SELECT, UPDATE, INSERT, DELETE ON TABLE extension.tbl_internat_massnahme_zuordnung TO web;

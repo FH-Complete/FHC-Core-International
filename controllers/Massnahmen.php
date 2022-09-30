@@ -176,22 +176,16 @@ class Massnahmen extends Auth_Controller
 		$this->_ci->load->view('extensions/FHC-Core-International/massnahmen/massnahmenDetails.php', array('massnahme' => $massnahmeexists));
 	}
 
-	private function _setAuthUID()
-	{
-		$this->_uid = getAuthUID();
-		if (!$this->_uid) show_error('User authentification failed');
-	}
-
 	private function _setNavigationMenuShowDetails()
 	{
 		$this->load->library('NavigationLib', array('navigation_page' => 'extensions/FHC-Core-International/Massnahmen/showMassnahme'));
 
 		$link = site_url('extensions/FHC-Core-International/Massnahmen');
 
-		$this->navigationlib->setSessionMenu(
+		$this->_ci->navigationlib->setSessionMenu(
 			array(
-				'back' => $this->navigationlib->oneLevel(
-					'Zurück',	// description
+				'back' => $this->_ci->navigationlib->oneLevel(
+					'Zurück',		// description
 					$link,			// link
 					array(),		// children
 					'angle-left',	// icon
@@ -204,5 +198,11 @@ class Massnahmen extends Auth_Controller
 				)
 			)
 		);
+	}
+
+	private function _setAuthUID()
+	{
+		$this->_uid = getAuthUID();
+		if (!$this->_uid) show_error('User authentification failed');
 	}
 }

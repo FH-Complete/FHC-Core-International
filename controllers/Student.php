@@ -80,22 +80,43 @@ class Student extends Auth_Controller
 
 		$massnahmen = getData($massnahmen);
 
-		$this->_ci->StudentModel->addSelect('(max_semester - semester) as semester');
+		$this->_ci->StudentModel->addLimit(1);
+		$this->_ci->StudentModel->addOrder('ausbildungssemester', 'DESC');
+		$this->_ci->StudentModel->addSelect('ausbildungssemester');
+		$this->_ci->StudentModel->addJoin('public.tbl_prestudentstatus', 'prestudent_id');
+		$ausbildungssemester = $this->_ci->StudentModel->loadWhere(array(
+			'student_uid' => $this->_uid,
+			'status_kurzbz' => 'Student'
+		));
+
+		if (isError($ausbildungssemester))
+			$this->terminateWithJsonError(getError($ausbildungssemester));
+
+		$ausbildungssemester = getData($ausbildungssemester)[0]->ausbildungssemester;
+
+		$this->_ci->StudentModel->addSelect('max_semester');
 		$this->_ci->StudentModel->addJoin('public.tbl_studiengang', 'studiengang_kz');
-		$diff = $this->_ci->StudentModel->load(array('student_uid' => $this->_uid));
+		$maxsemester = $this->_ci->StudentModel->load(array('student_uid' => $this->_uid));
 
-		if (isError($diff))
-			$this->terminateWithJsonError(getError($diff));
+		if (isError($maxsemester))
+			$this->terminateWithJsonError(getError($maxsemester));
 
-		$diff = getData($diff)[0]->semester;
+		$maxsemester = getData($maxsemester)[0]->max_semester;
 
-		$this->_ci->StudiensemesterModel->addLimit($diff);
-		$studiensemester = $this->_ci->StudiensemesterModel->loadWhere(array('start >=' => 'now()'));
+		$diff = $maxsemester - $ausbildungssemester;
 
-		if (isError($studiensemester))
-			$this->terminateWithJsonError(getError($studiensemester));
+		$studiensemester = [];
+		if ($diff !== 0)
+		{
+			$aktSemester = $this->_ci->StudiensemesterModel->getAktOrNextSemester();
+			$this->_ci->StudiensemesterModel->addLimit($diff + 1);
+			$this->_ci->StudiensemesterModel->addOrder('start');
+			$studiensemester = $this->_ci->StudiensemesterModel->loadWhere(array('start >=' => getData($aktSemester)[0]->start));
+			if (isError($studiensemester))
+				$this->terminateWithJsonError(getError($studiensemester));
 
-		$studiensemester = getData($studiensemester);
+			$studiensemester = getData($studiensemester);
+		}
 
 		$this->_ci->load->view('extensions/FHC-Core-International/cis/student.php',
 			array('massnahmen' => $massnahmen,
@@ -191,7 +212,7 @@ class Student extends Auth_Controller
 		/*
 		 * Solang die Bestätigung nicht akzeptiert wurde, kann sie gelöscht werden
 		 */
-		if ($massnahmenZuordnung->massnahme_status_kurzbz !== 'confirmed')
+		if ($massnahmenZuordnung->massnahme_status_kurzbz !== 'confirmed' && $massnahmenZuordnung->massnahme_status_kurzbz !== 'declined')
 		{
 			$updateZuordnung = $this->_ci->InternatmassnahmezuordnungModel->update(
 				array('massnahme_zuordnung_id' => $massnahmenZuordnung->massnahme_zuordnung_id),
@@ -240,7 +261,7 @@ class Student extends Auth_Controller
 		/*
 		 * Solang die Maßnahme nicht bestätigt wurde kann sie gelöscht werden
 		 */
-		if ($massnahmenZuordnung->massnahme_status_kurzbz !== 'confirmed')
+		if ($massnahmenZuordnung->massnahme_status_kurzbz !== 'confirmed' && $massnahmenZuordnung->massnahme_status_kurzbz !== 'declined')
 		{
 			$deleteStatus = $this->_ci->InternatmassnahmezuordnungstatusModel->delete(array('massnahme_zuordnung_id' => $massnahmenZuordnung->massnahme_zuordnung_id));
 

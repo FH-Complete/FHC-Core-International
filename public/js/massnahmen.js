@@ -17,8 +17,6 @@ function form_aktiv(cell, formatterParams)
 function form_details(cell, formatterParams)
 {
 	var massnahme = cell.getData().MassnahmeID;
-	//return  BASE_URL + "/" + APPROVE_ANRECHNUNG_DETAIL_URI + "?anrechnung_id=" + cell.getData().anrechnung_id
-
 
 	var edit = $("<div>" +
 		"<a style='color: inherit' href='"+ CONTROLLER_URL +"/showMassnahme?massnahme_id="+massnahme +"'>" +
@@ -60,9 +58,14 @@ var Massnahmen = {
 								Bezeichnung: data.bezeichnung,
 								Beschreibung: data.beschreibung,
 								Aktiv: data.aktiv,
-								ECTs: data.ects
+								ECTS: parseFloat(data.ects).toFixed(2)
 							})
 						);
+
+						$('.massnahmenAdd').find('input:text').val('');
+						$('.massnahmenAdd').find('textarea').val('');
+						$('#ects').val('');
+						$('#aktiv').prop('checked', false);
 					}
 				},
 				errorCallback: function(jqXHR, textStatus, errorThrown)

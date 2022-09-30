@@ -12,6 +12,7 @@ $query = '
 			status.bezeichnung_mehrsprachig['.$language.'] AS "status_bezeichnung",
 			status.massnahme_status_kurzbz,
 			zuordnung.anmerkung,
+			zuordnung.anmerkung_stgl as anmerkung_stgl,
 			zuordnung.studiensemester_kurzbz AS "studiensemester",
 			zuordnung.dms_id AS "document",
 			status.massnahme_status_kurzbz AS "akzeptieren",
@@ -49,7 +50,18 @@ $query = '
 		JOIN tbl_studiengang studiengang on prestudent.studiengang_kz = studiengang.studiengang_kz
 		JOIN extension.tbl_internat_massnahme_status status USING (massnahme_status_kurzbz)
 		JOIN public.tbl_studiensemester ON (tbl_studiensemester.studiensemester_kurzbz = zuordnung.studiensemester_kurzbz)
-	WHERE oe_kurzbz IN (\''. $oeKurz .'\')';
+	WHERE oe_kurzbz IN (\''. $oeKurz .'\')
+	ORDER BY studiengang DESC,
+			student_uid ASC,
+			CASE
+				WHEN status.massnahme_status_kurzbz = \'planned\' THEN 1
+				WHEN status.massnahme_status_kurzbz = \'accepted\' THEN 2
+				WHEN status.massnahme_status_kurzbz = \'performed\' THEN 3
+				WHEN status.massnahme_status_kurzbz = \'confirmed\' THEN 4
+				WHEN status.massnahme_status_kurzbz = \'declined\' THEN 5
+			END
+	
+	';
 
 $filterWidgetArray = array(
 	'query' => $query,
@@ -70,12 +82,13 @@ $filterWidgetArray = array(
 		ucfirst($this->p->t('global', 'status')),
 		'StatusKurz',
 		ucfirst($this->p->t('global', 'anmerkung')),
+		ucfirst($this->p->t('international', 'anmerkungstgl')),
 		ucfirst($this->p->t('international', 'studiensemesterGeplant')),
 		'Document',
 		ucfirst($this->p->t('international', 'planAkzeptieren')),
 		ucfirst($this->p->t('international', 'bestaetigungAkzeptieren')),
 		ucfirst($this->p->t('international', 'ectsMassnahme')),
-		ucfirst($this->p->t('global', 'kontakt')),
+		ucfirst($this->p->t('global', 'kontakt'))
 	),
 	'datasetRepOptions' => '{
 		index: "massnahme_zuordnung_id",
@@ -87,17 +100,15 @@ $filterWidgetArray = array(
 		columnVertAlign:"center",
 		columnAlign:"center",
 		fitColumns:true,
-		selectable: false,
+		selectable: true,
 		groupClosedShowCalcs:true,
-		groupStartOpen: [true, false],
+		groupStartOpen: [true],
 		groupBy: ["student_uid"],
 		selectableRangeMode: "click",
 		selectablePersistence: false,
-		initialSort:[
-			{column:"studiengang", dir:"desc"},
-			{column:"student_uid", dir:"asc"},
-			{column:"bezeichnung", dir:"desc"}
-		],
+		selectableCheck: function(row){
+			return func_selectableCheck(row);
+		},
 		rowUpdated:function(row){
 			resortTable(row);
 		},
@@ -106,7 +117,7 @@ $filterWidgetArray = array(
 		}
 	}',
 	'datasetRepFieldsDefs' => '{
-		massnahme_zuordnung_id: {visible: false},
+		massnahme_zuordnung_id: {visible: false, formatter: form_modal},
 		student_uid: {visible: false},
 		studiengang: {width: "150"},
 		vorname: {visible: false, width: "250"},
@@ -115,15 +126,16 @@ $filterWidgetArray = array(
 		status_bezeichnung: {width: "100"},
 		massnahme_status_kurzbz: {visible: false},
 		anmerkung: {visible: true},
-		studiensemester: {width: "250"},
+		anmerkung_stgl: {visible: true, width: "220"},
+		studiensemester: {width: "220"},
 		document: {visible: false},
-		akzeptieren: {formatter: form_status, align:"center", width: "200"},
-		massnahme_akzeptieren: {formatter: form_confirmation, align:"center", width: "250"},
+		akzeptieren: {formatter: form_status, align:"center", width: "150"},
+		massnahme_akzeptieren: {formatter: form_confirmation, align:"center", width: "210"},
 		ects: {align:"center", bottomCalc:sumETCs, bottomCalcParams:{precision:2}, width: "200"},
 		max_semester: {visible: false},
 		ausbildungssemester: {visible: false},
 		student_studiensemester: {visible: false},
-		kontakt: {formatter: form_kontakt, align:"center", width: "150"}
+		kontakt: {formatter: form_kontakt, align:"center", width: "100"}
 	}'
 );
 echo $this->widgetlib->widget('TableWidget', $filterWidgetArray);

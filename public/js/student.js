@@ -47,7 +47,7 @@ function form_upload(cell, formatterParams)
 
 		div.append(downloadNachweis);
 
-		if (status !== 'confirmed')
+		if (status !== 'confirmed' && status !== 'declined')
 		{
 			var deleteNachweis = Student._addButton('fa-trash');
 
@@ -74,7 +74,7 @@ function form_document(cell, formatterParams)
 	var massnahme = cell.getData().massnahme_zuordnung_id;
 	var status = cell.getData().massnahme_status_kurzbz;
 
-	if (status !== 'confirmed')
+	if (status !== 'confirmed' && status !== 'declined')
 	{
 		var deleteMassnahme = Student._addButton('fa-remove');
 
@@ -106,10 +106,8 @@ function func_height(table){
 	return $(window).height() * 0.5;
 }
 
-function func_groupHeader(data)
+function func_groupHeader(group)
 {
-	var group = data[0].massnahme_status_kurzbz;
-
 	switch (group)
 	{
 		case 'planned' :
@@ -124,14 +122,6 @@ function func_groupHeader(data)
 			return FHC_PhrasesLib.t('international', 'abgelehnteMassnahmen');
 	}
 }
-function func_rowAdded(row)
-{
-	$('#massnahmenSelect').prop("selectedIndex", 0);
-	$('#studiensemesterSelect').prop("selectedIndex", 0);
-	$('#massnahmenAnmerkung').val('');
-
-	$('.beschreibung').hide();
-}
 
 function func_rowUpdated(row)
 {
@@ -140,11 +130,6 @@ function func_rowUpdated(row)
 
 $(document).ready(function()
 {
-	$('.hinzufuegen').click(function()
-	{
-		$('.massnahmenAdd').slideToggle(300);
-	});
-
 	$('.showInfoText').click(function()
 	{
 		$('.internationalskills').slideToggle(300);
@@ -166,7 +151,7 @@ $(document).ready(function()
 
 		if (massnahme === null || studiensemester === null)
 		{
-			return FHC_DialogLib.alertWarning('Please fill out all fields');
+			return FHC_DialogLib.alertWarning(FHC_PhrasesLib.t('ui', 'errorFelderFehlen'));
 		}
 
 		var data = {
@@ -290,7 +275,7 @@ var Student = {
 
 						$(TABLE).tabulator(
 							'addRow',
-							JSON.stringify({
+							{
 								massnahme_zuordnung_id: data.massnahme_zuordnung_id,
 								bezeichnung: data.bezeichnung,
 								massnahme_status_kurzbz: 'planned',
@@ -300,8 +285,10 @@ var Student = {
 								massnahme_id: data.massnahme_id,
 								status: 'planned',
 								anmerkung: data.anmerkung
-							})
+							}, true
 						);
+
+						Student._resetFields();
 					}
 				},
 				errorCallback: function(jqXHR, textStatus, errorThrown)
@@ -311,6 +298,15 @@ var Student = {
 				}
 			}
 		)
+	},
+
+	_resetFields: function()
+	{
+		$('#massnahmenSelect').prop("selectedIndex", 0);
+		$('#studiensemesterSelect').prop("selectedIndex", 0);
+		$('#massnahmenAnmerkung').val('');
+
+		$('.beschreibung').hide();
 	},
 
 	_addButton: function(icon)

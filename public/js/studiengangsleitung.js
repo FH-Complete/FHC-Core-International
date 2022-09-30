@@ -4,7 +4,12 @@ const CONTROLLER_URL = BASE_URL + "/"+CALLED_PATH;
 
 const TABLE = '[tableuniqueid = leitungMassnahmeOverview] #tableWidgetTabulator';
 
-var STUDIENSEMESTER;
+
+function form_modal(cell, formatterParams)
+{
+	var massnahme = cell.getData().massnahme_zuordnung_id;
+	return Studiengangsleitung._addModal(massnahme);
+}
 
 function form_status(cell, formatterParams)
 {
@@ -17,19 +22,16 @@ function form_status(cell, formatterParams)
 
 		if (status === 'planned')
 		{
-			div.append(Studiengangsleitung._addButton(massnahme,'fa-calendar-check-o', 'accepted'));
+			div.append(Studiengangsleitung._addButton(massnahme,'fa-calendar-check-o', 'accepted', 'planAkzeptieren'));
 		}
 
 		div.append('&nbsp;');
-		if (status === 'performed')
-			div.append(Studiengangsleitung._addButton(massnahme,'fa-calendar-minus-o', 'declined', 'entakzeptierenConfirm'));
-		else
-			div.append(Studiengangsleitung._addButton(massnahme,'fa-calendar-minus-o', 'declined'));
+		div.append(Studiengangsleitung._addButton(massnahme,'fa-calendar-minus-o', 'declined', 'planAblehnen',true));
+
 		return div[0];
 	}
 	else
 		return '-';
-
 }
 
 function form_confirmation(cell, formatterParams)
@@ -42,7 +44,7 @@ function form_confirmation(cell, formatterParams)
 	{
 		var div = $("<div></div>");
 
-		var downloadNachweis = $("<button class='btn btn-default'>" +
+		var downloadNachweis = $("<button class='btn btn-default' title='" + FHC_PhrasesLib.t("international", "ectsBestaetigt") +"'>" +
 									"<i class='fa fa-download fa-1x' aria-hidden = 'true' ></i >" +
 								"</button>");
 
@@ -55,15 +57,16 @@ function form_confirmation(cell, formatterParams)
 		if (status === 'performed')
 		{
 			div.append('&nbsp;');
-			div.append(Studiengangsleitung._addButton(massnahme,'fa-check', 'confirmed'));
+			div.append(Studiengangsleitung._addButton(massnahme,'fa-check', 'confirmed', 'bestaetigungAkzeptieren'));
 
 			div.append('&nbsp;');
-			div.append(Studiengangsleitung._addButton(massnahme,'fa-trash', 'accepted', 'fileLoeschenConfirm'));
+			div.append(Studiengangsleitung._addButton(massnahme,'fa-remove', 'declined', 'bestaetigungAblehnen', true));
+
 		}
 		else if (status === 'confirmed')
 		{
 			div.append('&nbsp;');
-			div.append(Studiengangsleitung._addButton(massnahme,'fa-ban', 'accepted', 'entbestaetigenConfirm'));
+			div.append(Studiengangsleitung._addButton(massnahme,'fa-ban', 'performed', 'entbestaetigenConfirm'));
 		}
 
 		return div[0];
@@ -77,18 +80,20 @@ function form_kontakt(cell, formatterParams)
 	return "<a href='mailto:"+ cell.getData().student_uid +"@technikum-wien.at?subject=" + cell.getData().bezeichnung + "'><i class='fa fa-envelope'></i></a>"
 }
 
-function func_height(table){
-	return $(window).height() * 0.80;
+function func_height(table)
+{
+	return $(window).height() * 0.70;
+}
+
+function func_selectableCheck(row)
+{
+	return row.getData().massnahme_status_kurzbz === 'planned';
 }
 
 function resortTable(row)
 {
 	var table = row.getTable();
-	table.setSort([
-		{column: 'studiengang', dir: 'desc'},
-		{column: 'student_uid', dir: 'asc'},
-		{column: 'bezeichnung', dir: 'desc'}
-	]);
+	table.setSort([]);
 }
 
 function sumETCs(values, data, calcParams)
@@ -156,8 +161,11 @@ var Studiengangsleitung = {
 							'document' : data.dms_id,
 							'status_bezeichnung' : data.status_bezeichnung,
 							'akzeptieren': data.status,
-							'massnahme_akzeptieren': data.status
+							'massnahme_akzeptieren': data.status,
+							'anmerkung_stgl' : data.anmerkung_stgl
 						});
+						$('#absageModal_' + data.massnahme).modal('hide');
+						$(TABLE).tabulator('deselectRow', data.massnahme);
 					}
 				},
 				errorCallback: function(jqXHR, textStatus, errorThrown)
@@ -169,17 +177,61 @@ var Studiengangsleitung = {
 		)
 	},
 
+	getStudents: function(filterData)
+	{
+		FHC_AjaxClient.ajaxCallGet(
+			CALLED_PATH + "/getStudents",
+				filterData,
+			{
+				successCallback: function (data, textStatus, jqXHR) {
+					if (FHC_AjaxClient.isSuccess(data))
+					{
+						if (FHC_AjaxClient.isError(data))
+						{
+							FHC_DialogLib.alertError(FHC_AjaxClient.getError(data))
+						}
+
+						if (FHC_AjaxClient.hasData(data))
+						{
+							var studentsData = FHC_AjaxClient.getData(data);
+							Studiengangsleitung._setFilter(studentsData);
+						}
+						else
+							Studiengangsleitung._setFilter([]);
+					}
+				},
+				errorCallback: function (jqXHR, textStatus, errorThrown) {
+					FHC_AjaxClient.hideVeil();
+					FHC_DialogLib.alertError(FHC_AjaxClient.getError(jqXHR));
+				}
+			}
+		)
+	},
+
+	_setFilter: function(filterData)
+	{
+		$(TABLE).tabulator('setFilter',
+			[
+				{field: 'student_uid', type: 'in', value: filterData}
+			]
+		);
+	},
+
 	_lastSemester: function(data, filterParams)
 	{
 		return data.max_semester === data.ausbildungssemester && data.student_studiensemester === STUDIENSEMESTER;
 	},
 
-	_addButton: function(massnahme, icon, status, confirmText = null)
+	_getMassnahmeIdFromElementId(elementid)
 	{
-		var button = $("<button class='btn btn-default'>" +
+		return elementid.substr(elementid.indexOf("_") + 1);
+	},
+
+	_addButton: function(massnahme, icon, status, title, absage = false)
+	{
+		var button = $("<button class='btn btn-default' title='" + FHC_PhrasesLib.t("international", title) + "'>" +
 							"<i class='fa "+ icon +" fa-1x' aria-hidden = 'true'></i >" +
 						"</button>");
-
 
 		$(button).on('click', function() {
 			var data = {
@@ -187,23 +239,117 @@ var Studiengangsleitung = {
 				'status': status
 			};
 
-			if (confirmText !== null)
+			if (absage)
 			{
-				if (confirm(FHC_PhrasesLib.t('international', confirmText)))
-				{
+				let absageGrund = '';
+
+				$('#absageModalLabelTitel_' +massnahme).text(FHC_PhrasesLib.t("international", title));
+				$('#absageModal_' + massnahme).appendTo('body').modal('show');
+				$('#saveAbsageGrund_' + massnahme).unbind().click(function() {
+
+					absageGrund = $('#inputAbsageGrundText_' + massnahme).val();
+
+					data.absagegrund = absageGrund;
+
 					Studiengangsleitung.setStatus(data);
-				}
+				});
 			}
 			else
+			{
 				Studiengangsleitung.setStatus(data);
+			}
 		});
 		return button;
+	},
+
+	_addModal: function(massnahme)
+	{
+		return "<div class='modal fade absageModal'  id='absageModal_" + massnahme + "' tabindex='0' role='dialog' aria-labelledby='absageModalLabel' aria-hidden='true'>" +
+					"<div class='modal-dialog'>" +
+						"<div class='modal-content'>" +
+							"<div class='modal-header'>" +
+								"<button type='button' class='close' data-dismiss='modal' aria-hidden='true'>&times; </button>" +
+								"<h4 class='modal-title' id='absageModalLabelTitel_" + massnahme +"'></span></h4>" +
+							"</div>" +
+							"<div class='modal-body'>" +
+								"<div class='form-group'>" +
+									"<label for='inputAbsageGrundText_" + massnahme +"'>"+ FHC_PhrasesLib.t('international', 'grund') +"</label>" +
+									"<textarea id='inputAbsageGrundText_" + massnahme +"' required  rows='5' class='form-control'></textarea>" +
+								"</div>" +
+							"</div>" +
+							"<div class='modal-footer'>" +
+								"<button type='button' class='btn btn-default saveAbsageGrund' id='saveAbsageGrund_" + massnahme +"'>Speichern</button>" +
+								"<button type='button' class='btn btn-default' data-dismiss='modal'>Abbrechen</button>" +
+							"</div>" +
+						"</div>" +
+					"</div>" +
+				"</div>";
 	},
 }
 
 $(document).ready(function() {
 
 	Studiengangsleitung.getAktStudiensemester();
+
+	$('#acceptAll').click(function() {
+		var rows = $(TABLE).tabulator('getSelectedRows');
+
+		rows.forEach(function(row) {
+			if (row.getData().massnahme_status_kurzbz === 'planned')
+			{
+				var data = {
+					'massnahme_id' : row.getData().massnahme_zuordnung_id,
+					'status': 'accepted'
+				};
+
+				Studiengangsleitung.setStatus(data);
+			}
+		});
+	});
+
+	$('#plannedMore').click(function() {
+		var data = {
+			'status': ['planned', 'confirmed', 'performed', 'accepted'],
+			'more': true,
+			'ects': 5,
+			'exists': true
+		}
+
+		Studiengangsleitung.getStudents(data);
+	});
+
+	$('#plannedLess').click(function() {
+		var data = {
+			'status': ['planned', 'confirmed', 'performed', 'accepted'],
+			'more': false,
+			'ects': 5,
+			'exists': true,
+		}
+
+		Studiengangsleitung.getStudents(data);
+	});
+
+	$('#confirmedMore').click(function() {
+		var data = {
+			'status': ['confirmed'],
+			'more': true,
+			'ects': 5,
+			'exists': true
+		}
+
+		Studiengangsleitung.getStudents(data);
+	});
+
+	$('#confirmedLess').click(function() {
+		var data = {
+			'status': ['confirmed'],
+			'more': false,
+			'ects': 5,
+			'exists': false
+		}
+
+		Studiengangsleitung.getStudents(data);
+	});
 
 	$("#showOpen").click(function() {
 		$(TABLE).tabulator('setFilter',

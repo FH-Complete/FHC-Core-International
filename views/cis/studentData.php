@@ -10,6 +10,7 @@ $query = '
 		status.bezeichnung_mehrsprachig['.$language.'] AS "status",
 		status.massnahme_status_kurzbz,
 		zuordnung.anmerkung,
+		zuordnung.anmerkung_stgl,
 		zuordnung.dms_id,
 		zuordnung.massnahme_zuordnung_id,
 		massnahme.massnahme_id,
@@ -32,7 +33,15 @@ $query = '
 			)
 		JOIN extension.tbl_internat_massnahme_status status USING (massnahme_status_kurzbz)
 		JOIN public.tbl_studiensemester USING (studiensemester_kurzbz)
-	WHERE student.student_uid = \''.$student .'\'';
+	WHERE student.student_uid = \''.$student .'\'
+	ORDER BY CASE
+		WHEN status.massnahme_status_kurzbz = \'planned\' THEN 1
+		WHEN status.massnahme_status_kurzbz = \'accepted\' THEN 2
+		WHEN status.massnahme_status_kurzbz = \'performed\' THEN 3
+		WHEN status.massnahme_status_kurzbz = \'confirmed\' THEN 4
+		WHEN status.massnahme_status_kurzbz = \'declined\' THEN 5
+	END'
+;
 ;
 
 $filterWidgetArray = array(
@@ -52,6 +61,7 @@ $filterWidgetArray = array(
 		ucfirst($this->p->t('global', 'status')),
 		'StatusKurz',
 		ucfirst($this->p->t('global', 'anmerkung')),
+		ucfirst($this->p->t('international', 'anmerkungstgl')),
 		ucfirst($this->p->t('international', 'bestaetigungHochladen')),
 		'MassnahmenZuordnung',
 		'MassnahmenID',
@@ -70,16 +80,16 @@ $filterWidgetArray = array(
 		selectable: false,
 		groupClosedShowCalcs:true,
 		groupBy: ["massnahme_status_kurzbz"],
+		groupValues: [
+			["planned", "accepted", "performed", "confirmed", "declined"],
+		],
 		selectableRangeMode: "click",
 		selectablePersistence: false,
-		rowAdded:function(row){
-			func_rowAdded(row);
-		},
 		rowUpdated:function(row){
 			func_rowUpdated(row);
 		},
 		groupHeader:function(value, count, data, group){
-			return func_groupHeader(data);
+			return func_groupHeader(value);
 		},
 	}',
 	'datasetRepFieldsDefs' => '{
@@ -89,6 +99,7 @@ $filterWidgetArray = array(
 		status: {visible: false},
 		massnahme_status_kurzbz: {visible:false},
 		anmerkung: {visible: true},
+		anmerkung_stgl: {visible: true},
 		dms_id: {formatter: form_upload, align:"center",  width:"200"},
 		massnahme_zuordnung_id: {visible: false},
 		massnahme_id: {visible: false},

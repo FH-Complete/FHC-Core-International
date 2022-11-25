@@ -108,6 +108,7 @@ class Studiengangsleitung extends Auth_Controller
 		};
 		$language = getUserLanguage() == 'German' ? 0 : 1;
 
+		$this->sendMail($massnahmeZuordnung->massnahme_zuordnung_id);
 		$this->outputJsonSuccess(array('massnahme' => $massnahmeZuordnung->massnahme_zuordnung_id, 'status' => $statusKurz, 'dms_id' => $massnahmeZuordnung->dms_id, 'status_bezeichnung' => $status->bezeichnung_mehrsprachig[$language], 'anmerkung_stgl' => $absagePost));
 	}
 
@@ -184,6 +185,45 @@ class Studiengangsleitung extends Auth_Controller
 		}
 		else
 			$this->outputJsonSuccess(null);
+	}
+
+	private function sendMail($massnahme_zuordnung_id)
+	{
+		$massnahmeZuordnung = $this->_checkMassnahmenZuordnung($massnahme_zuordnung_id);
+
+		$this->load->helper('hlp_sancho');
+
+		$mail = $massnahmeZuordnung->student_uid . '@technikum-wien.at';
+		
+		//Wenn die Bestätigung widerrufen wurde, damit in der Mail der Status "durchgeführt" beim Studierenden nicht auftaucht.
+		if ($massnahmeZuordnung->massnahme_status_kurzbz === 'performed')
+		{
+			$status = 'widerrufen';
+			$status_englisch = 'revoked';
+		}
+		else
+		{
+			$status = $massnahmeZuordnung->status_bezeichnung_both[0];
+			$status_englisch = $massnahmeZuordnung->status_bezeichnung_both[1];
+		}
+
+		$body_fields = array(
+			'vorname' => $massnahmeZuordnung->vorname,
+			'nachname' => $massnahmeZuordnung->nachname,
+			'massnahme' => $massnahmeZuordnung->bezeichnung_both[0],
+			'massnahme_eng' => $massnahmeZuordnung->bezeichnung_both[1],
+			'status' => $status,
+			'status_eng' => $status_englisch,
+			'link' => anchor(site_url('extensions/FHC-Core-International/Student'), 'International Skills')
+		);
+		
+		// Send mail
+		sendSanchoMail(
+			'InternationalStudentOverview',
+			$body_fields,
+			$mail,
+			'International Skills: Update'
+		);
 	}
 
 	private function _checkMassnahmenZuordnung($massnahmeZuordnungPost)

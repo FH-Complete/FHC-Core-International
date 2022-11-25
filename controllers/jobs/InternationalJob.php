@@ -37,24 +37,30 @@ class InternationalJob extends JOB_Controller
 
 			$content = $this->_getContent($studiengang_kz, $massnahmen);
 
-			$studiengang = $this->StudiengangModel->load($studiengang_kz)->retval[0];
+			$studiengang = $this->StudiengangModel->load($studiengang_kz);
 
-			foreach ($stglMails as $stglMail)
+			if (hasData($studiengang))
 			{
-				$body_fields = array(
-					'vorname' => $stglMail['vorname'],
-					'studiengang' => $studiengang->bezeichnung,
-					'datentabelle' => $content,
-					'link' => anchor(site_url('extensions/FHC-Core-International/Studiengangsleitung'), 'International Skills Übersicht')
-				);
-
-				// Send mail
-				sendSanchoMail(
-					'InternationalOverview',
-					$body_fields,
-					$stglMail['to'],
-					'International Skills: Status Änderungen'
-				);
+				$studiengang = getData($studiengang)[0];
+				
+				foreach ($stglMails as $stglMail)
+				{
+					$body_fields = array(
+						'vorname' => $stglMail['vorname'],
+						'nachname' => $stglMail['nachname'],
+						'studiengang' => $studiengang->bezeichnung,
+						'datentabelle' => $content,
+						'link' => anchor(site_url('extensions/FHC-Core-International/Studiengangsleitung'), 'International Skills')
+					);
+					
+					// Send mail
+					sendSanchoMail(
+						'InternationalOverview',
+						$body_fields,
+						$stglMail['to'],
+						'International Skills: Update'
+					);
+				}
 			}
 		}
 
@@ -63,16 +69,14 @@ class InternationalJob extends JOB_Controller
 
 	private function _getStudentsWithMassnahme($days)
 	{
-		$language = getUserLanguage() == 'German' ? 0 : 1;
-
 		$qry = "
 			SELECT 
 				student.student_uid,
 				person.vorname,
 				person.nachname,
-				array_to_json(status.bezeichnung_mehrsprachig::varchar[])->>" . $language ." AS status,
-				array_to_json(massnahme.bezeichnung_mehrsprachig::varchar[])->>" . $language ." AS bezeichnung,
-				studiengang.studiengang_kz
+				studiengang.studiengang_kz,
+				status.bezeichnung_mehrsprachig AS status_bezeichnung_both,
+				massnahme.bezeichnung_mehrsprachig AS bezeichnung_both
 			FROM extension.tbl_internat_massnahme_zuordnung zuordnung
 				JOIN extension.tbl_internat_massnahme massnahme USING (massnahme_id)
 				JOIN extension.tbl_internat_massnahme_zuordnung_status zstatus 
@@ -111,7 +115,8 @@ class InternationalJob extends JOB_Controller
 			{
 				$stglMails[] = array(
 					'to' => $stgl->uid. '@'. DOMAIN,
-					'vorname' => $stgl->vorname
+					'vorname' => $stgl->vorname,
+					'nachname' => $stgl->nachname,
 				);
 			}
 
@@ -123,8 +128,9 @@ class InternationalJob extends JOB_Controller
 
 			if (hasData($result))
 			{
+				$result = getData($result)[0];
 				return array(
-					$result->retval[0]->email,
+					$result->email,
 					''
 				);
 			}
@@ -153,8 +159,8 @@ class InternationalJob extends JOB_Controller
 						<td>'. $massnahme->student_uid .'</td>
 						<td>'. $massnahme->vorname .'</td>
 						<td>'. $massnahme->nachname .'</td>
-						<td>'. $massnahme->bezeichnung .'</td>
-						<td>'. $massnahme->status .'</td>
+						<td>'. $massnahme->bezeichnung_both[0] . '</td>
+						<td>'. $massnahme->status_bezeichnung_both[0] .'</td>
 					</tr>';
 		}
 

@@ -45,7 +45,11 @@ class Internatmassnahmezuordnung_model extends DB_Model
 					zuordnung.dms_id,
 					array_to_json(massnahme.bezeichnung_mehrsprachig::varchar[])->>' . $language .' AS bezeichnung,
 					student.student_uid,
-					array_to_json(zstatus.bezeichnung_mehrsprachig::varchar[])->>' . $language . ' AS status_bezeichnung
+					array_to_json(zstatus.bezeichnung_mehrsprachig::varchar[])->>' . $language . ' AS status_bezeichnung,
+					zstatus.bezeichnung_mehrsprachig AS status_bezeichnung_both,
+					massnahme.bezeichnung_mehrsprachig AS bezeichnung_both,
+					person.vorname,
+					person.nachname
 			FROM extension.tbl_internat_massnahme_zuordnung zuordnung
 				JOIN extension.tbl_internat_massnahme massnahme USING(massnahme_id)
 				JOIN extension.tbl_internat_massnahme_zuordnung_status status ON zuordnung.massnahme_zuordnung_id = status.massnahme_zuordnung_id

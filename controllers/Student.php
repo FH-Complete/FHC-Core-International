@@ -45,6 +45,8 @@ class Student extends Auth_Controller
 
 		$this->load->helper('form');
 
+		$this->_ci->load->config('extensions/FHC-Core-International/international');
+
 		$this->setControllerId(); // sets the controller id
 		$this->_setAuthUID();
 
@@ -64,8 +66,7 @@ class Student extends Auth_Controller
 			show_error($this->_ci->p->t('international', 'nurBachelor'));
 
 		$student = getData($student)[0];
-
-		if ($student->typ !== 'b')
+		if ($student->typ !== 'b' || in_array($student->studiengang_kz, $this->_ci->config->item('stg_kz_blacklist')))
 			show_error($this->_ci->p->t('international', 'nurBachelor'));
 
 		$this->_ci->InternatmassnahmeModel->addOrder('ects');

@@ -216,10 +216,12 @@ class Studiengangsleitung extends Auth_Controller
 			'status_eng' => $status_englisch,
 			'link' => anchor(site_url('extensions/FHC-Core-International/Student'), 'International Skills')
 		);
-		
+
+		$vorlage = $massnahmeZuordnung->massnahme_status_kurzbz === 'confirmed' ? 'InternationalStudentOverviewConf' : 'InternationalStudentOverview';
+
 		// Send mail
 		sendSanchoMail(
-			'InternationalStudentOverview',
+			$vorlage,
 			$body_fields,
 			$mail,
 			'International Skills: Update'

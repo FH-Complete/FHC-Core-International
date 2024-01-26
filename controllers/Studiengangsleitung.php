@@ -15,11 +15,11 @@ class Studiengangsleitung extends Auth_Controller
 	public function __construct()
 	{
 		parent::__construct(array(
-				'index' => self::BERECHTIGUNG_KURZBZ .':rw',
-				'setStatus' => self::BERECHTIGUNG_KURZBZ .':rw',
-				'download' => self::BERECHTIGUNG_KURZBZ.':rw',
-				'getAktStudiensemester' => self::BERECHTIGUNG_KURZBZ.':rw',
-				'getStudents' => self::BERECHTIGUNG_KURZBZ.':rw'
+				'index' => self::BERECHTIGUNG_KURZBZ .':r',
+				'setStatus' => self::BERECHTIGUNG_KURZBZ .':r',
+				'download' => self::BERECHTIGUNG_KURZBZ.':r',
+				'getAktStudiensemester' => self::BERECHTIGUNG_KURZBZ.':r',
+				'getStudents' => self::BERECHTIGUNG_KURZBZ.':r'
 			)
 		);
 
@@ -62,6 +62,10 @@ class Studiengangsleitung extends Auth_Controller
 
 	public function setStatus()
 	{
+		//Die Berechtigung wird hier nochmals abgeprüft, damit man, wenn man nur Lesezugriff hat, kein "Generic Error" zurückbekommt
+		if (!$this->_ci->permissionlib->isBerechtigt(self::BERECHTIGUNG_KURZBZ, 'suid'))
+			$this->terminateWithJsonError($this->_ci->p->t('ui', 'keineBerechtigung'));
+
 		$massnahmeZuordnungPost = $this->_ci->input->post('massnahme_id');
 		$statusPost = $this->_ci->input->post('status');
 		$absagePost = $this->_ci->input->post('absagegrund');
@@ -217,7 +221,12 @@ class Studiengangsleitung extends Auth_Controller
 			'link' => anchor(site_url('extensions/FHC-Core-International/Student'), 'International Skills')
 		);
 
-		$vorlage = $massnahmeZuordnung->massnahme_status_kurzbz === 'confirmed' ? 'InternationalStudentOverviewConf' : 'InternationalStudentOverview';
+		$vorlage = 'InternationalStudentOverview';
+
+		if ($massnahmeZuordnung->massnahme_status_kurzbz === 'confirmed')
+			$vorlage = 'InternationalStudentOverviewConf';
+		else if($massnahmeZuordnung->massnahme_status_kurzbz === 'accepted')
+			$vorlage = 'InternationalStudentOverviewPlan';
 
 		// Send mail
 		sendSanchoMail(

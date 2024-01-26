@@ -112,30 +112,29 @@ function sumETCs(values, data, calcParams)
 }
 
 var Studiengangsleitung = {
+
 	getAktStudiensemester: function()
 	{
-		FHC_AjaxClient.ajaxCallGet(
-			CALLED_PATH + "/getAktStudiensemester",
-			{},
-			{
-				successCallback: function (data, textStatus, jqXHR) {
-					if (FHC_AjaxClient.isError(data))
-					{
-						FHC_DialogLib.alertError(FHC_AjaxClient.getError(data))
+		return new Promise(function(resolve, reject) {
+			FHC_AjaxClient.ajaxCallGet(
+				CALLED_PATH + "/getAktStudiensemester",
+				{},
+				{
+					successCallback: function (data, textStatus, jqXHR) {
+						if (FHC_AjaxClient.isError(data)) {
+							FHC_DialogLib.alertError(FHC_AjaxClient.getError(data))
+						}
+						if (FHC_AjaxClient.isSuccess(data)) {
+							resolve(FHC_AjaxClient.getData(data));
+						}
+					},
+					errorCallback: function (jqXHR, textStatus, errorThrown) {
+						FHC_AjaxClient.hideVeil();
+						FHC_DialogLib.alertError(FHC_AjaxClient.getError(jqXHR));
 					}
-
-					if (FHC_AjaxClient.isSuccess(data))
-					{
-						data = FHC_AjaxClient.getData(data);
-						STUDIENSEMESTER = data;
-					}
-				},
-				errorCallback: function (jqXHR, textStatus, errorThrown) {
-					FHC_AjaxClient.hideVeil();
-					FHC_DialogLib.alertError(FHC_AjaxClient.getError(jqXHR));
 				}
-			}
-		)
+			)
+		})
 	},
 
 	setStatus: function(data)
@@ -163,6 +162,8 @@ var Studiengangsleitung = {
 							'akzeptieren': data.status,
 							'massnahme_akzeptieren': data.status,
 							'anmerkung_stgl' : data.anmerkung_stgl
+						}).then(() => {
+							$(TABLE).tabulator('scrollToRow', data.massnahme, 'top', true)
 						});
 						$('#absageModal_' + data.massnahme).modal('hide');
 						$(TABLE).tabulator('deselectRow', data.massnahme);
@@ -215,11 +216,6 @@ var Studiengangsleitung = {
 				{field: 'student_uid', type: 'in', value: filterData}
 			]
 		);
-	},
-
-	_lastSemester: function(data, filterParams)
-	{
-		return data.max_semester === data.ausbildungssemester && data.student_studiensemester === STUDIENSEMESTER;
 	},
 
 	_getMassnahmeIdFromElementId(elementid)
@@ -289,8 +285,30 @@ var Studiengangsleitung = {
 
 $(document).ready(function() {
 
-	Studiengangsleitung.getAktStudiensemester();
+	Studiengangsleitung.getAktStudiensemester().then(function(STUDIENSEMESTER)
+	{
+		$('#currentSemester').click(function() {
+			$(TABLE).tabulator('setFilter',
+				[
+					{field: 'student_studiensemester', type: '=', value: STUDIENSEMESTER}
+				]
+			);
+		});
 
+		$('#currentOpenSemester').click(function() {
+			$(TABLE).tabulator('setFilter',
+				[
+					{field: 'studiensemester', type: '=', value: STUDIENSEMESTER}
+				]
+			);
+		});
+
+		$('#lastSemester').click(function() {
+			$(TABLE).tabulator('setFilter', (function (data) {
+				return data.max_semester === data.ausbildungssemester && data.student_studiensemester === STUDIENSEMESTER;
+			}));
+		});
+	});
 	$('#acceptAll').click(function() {
 		var rows = $(TABLE).tabulator('getSelectedRows');
 
@@ -305,6 +323,11 @@ $(document).ready(function() {
 				Studiengangsleitung.setStatus(data);
 			}
 		});
+	});
+
+	$('#selectAll').click(function() {
+		$(TABLE).tabulator('getRows').filter(row => row.getData().massnahme_status_kurzbz === 'planned')
+			.forEach(row => row.select());
 	});
 
 	$('#plannedMore').click(function() {
@@ -359,24 +382,12 @@ $(document).ready(function() {
 		);
 	});
 
-	$('#currentSemester').click(function() {
+	$("#showUploaded").click(function() {
 		$(TABLE).tabulator('setFilter',
 			[
-				{field: 'student_studiensemester', type: '=', value: STUDIENSEMESTER}
+				{field: 'massnahme_status_kurzbz', type: '=', value: 'performed'}
 			]
 		);
-	});
-
-	$('#currentOpenSemester').click(function() {
-		$(TABLE).tabulator('setFilter',
-			[
-				{field: 'studiensemester', type: '=', value: STUDIENSEMESTER}
-			]
-		);
-	});
-
-	$('#lastSemester').click(function() {
-		$(TABLE).tabulator('setFilter', Studiengangsleitung._lastSemester);
 	});
 
 	$('#deleteFilter').click(function() {

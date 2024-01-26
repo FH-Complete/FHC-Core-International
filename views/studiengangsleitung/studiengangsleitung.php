@@ -43,23 +43,27 @@ $this->load->view(
 			</div>
 			<div class="col-xs-12">
 				<div class="row text-left">
-					<button id="acceptAll" class="btn btn-default" type="button"><?php echo $this->p->t('international', 'alleAkzeptierenPlan'); ?></button>
+					<div class="col-xs-4">
+						<button id="selectAll" class="btn btn-default" type="button"><?php echo $this->p->t('international', 'alleGeplantenMarkieren'); ?></button>
+						<button id="acceptAll" class="btn btn-default" type="button"><?php echo $this->p->t('international', 'alleAkzeptierenPlan'); ?></button>
+					</div>
 				</div>
+			</div>
+			<div class="col-xs-12">
 				<br />
 				<div class="row text-left">
-					<div>
-						<div class="btn-group" role="group">
-							<button id="plannedMore" class="btn btn-default" type="button" title="<?php echo $this->p->t('international', 'mehrverplant'); ?>"><i class='fa fa-calendar-plus-o'></i></button>
-							<button id="plannedLess" class="btn btn-default" type="button" title="<?php echo $this->p->t('international', 'wenigerverplant'); ?>"><i class='fa fa-calendar-minus-o'></i></button>
-							<button id="confirmedMore" class="btn btn-default" type="button" title="<?php echo $this->p->t('international', 'mehrbestaetigt'); ?>"><i class='fa fa-calendar-check-o'></i></button>
-							<button id="confirmedLess" class="btn btn-default" type="button" title="<?php echo $this->p->t('international', 'wenigerbestaetigt'); ?>"><i class='fa fa-calendar-times-o'></i></button>
+					<div class="btn-group" role="group">
+						<button id="plannedMore" class="btn btn-default" type="button" title="<?php echo $this->p->t('international', 'mehrverplant'); ?>"><i class='fa fa-calendar-plus-o'></i></button>
+						<button id="plannedLess" class="btn btn-default" type="button" title="<?php echo $this->p->t('international', 'wenigerverplant'); ?>"><i class='fa fa-calendar-minus-o'></i></button>
+						<button id="confirmedMore" class="btn btn-default" type="button" title="<?php echo $this->p->t('international', 'mehrbestaetigt'); ?>"><i class='fa fa-calendar-check-o'></i></button>
+						<button id="confirmedLess" class="btn btn-default" type="button" title="<?php echo $this->p->t('international', 'wenigerbestaetigt'); ?>"><i class='fa fa-calendar-times-o'></i></button>
 
-							<button id="showOpen" class="btn btn-default" type="button" title="<?php echo $this->p->t('international', 'allegeplanten'); ?>"><i class='fa fa-calendar'></i></button>
-							<button id="currentOpenSemester" class="btn btn-default" type="button" title="<?php echo $this->p->t('international', 'alleMassnahmenJetzt'); ?>"><i class='fa fa-clock-o'></i></button>
-							<button id="currentSemester" class="btn btn-default" type="button" title="<?php echo $this->p->t('international', 'alleStudierendeJetzt'); ?>"><i class='fa fa-calendar-o'></i></button>
-							<button id="lastSemester" class="btn btn-default" type="button" title="<?php echo $this->p->t('international', 'lastSemester'); ?>"><i class='fa fa-clock-o'></i></button>
-							<button id="deleteFilter" class="btn btn-default" type="button" title="<?php echo $this->p->t('ui', 'alleAnzeigen'); ?>"><i class='fa fa-users'></i></button>
-						</div>
+						<button id="showOpen" class="btn btn-default" type="button" title="<?php echo $this->p->t('international', 'allegeplanten'); ?>"><i class='fa fa-calendar'></i></button>
+						<button id="currentOpenSemester" class="btn btn-default" type="button" title="<?php echo $this->p->t('international', 'alleMassnahmenJetzt'); ?>"><i class='fa fa-clock-o'></i></button>
+						<button id="currentSemester" class="btn btn-default" type="button" title="<?php echo $this->p->t('international', 'alleStudierendeJetzt'); ?>"><i class='fa fa-calendar-o'></i></button>
+						<button id="lastSemester" class="btn btn-default" type="button" title="<?php echo $this->p->t('international', 'lastSemester'); ?>"><i class='fa fa-clock-o'></i></button>
+						<button id="showUploaded" class="btn btn-default" type="button" title="<?php echo $this->p->t('international', 'alledurchgefuehrten'); ?>"><i class='fa fa-check'></i></button>
+						<button id="deleteFilter" class="btn btn-default" type="button" title="<?php echo $this->p->t('ui', 'alleAnzeigen'); ?>"><i class='fa fa-users'></i></button>
 					</div>
 				</div>
 			</div>

@@ -94,7 +94,6 @@ $filterWidgetArray = array(
 		index: "massnahme_zuordnung_id",
 		height: func_height(this),
 		layout: "fitColumns",
-		persistantLayout: false,
 		headerFilterPlaceholder: " ",
 		tableWidgetHeader: false,
 		columnVertAlign:"center",

@@ -34,10 +34,10 @@ $query = '
 			) AS "student_studiensemester"
 	FROM extension.tbl_internat_massnahme_zuordnung zuordnung
 		JOIN extension.tbl_internat_massnahme massnahme USING (massnahme_id)
-		JOIN extension.tbl_internat_massnahme_zuordnung_status zstatus 
+		JOIN extension.tbl_internat_massnahme_zuordnung_status zstatus
 			ON(zuordnung.massnahme_zuordnung_id = zstatus.massnahme_zuordnung_id
 				AND zstatus.massnahme_zuordnung_status_id = (
-					SELECT massnahme_zuordnung_status_id 
+					SELECT massnahme_zuordnung_status_id
 					FROM extension.tbl_internat_massnahme_zuordnung_status sstatus
 					JOIN extension.tbl_internat_massnahme_zuordnung szuordnung USING (massnahme_zuordnung_id)
 					WHERE szuordnung.massnahme_zuordnung_id = zstatus.massnahme_zuordnung_id
@@ -60,7 +60,7 @@ $query = '
 				WHEN status.massnahme_status_kurzbz = \'confirmed\' THEN 4
 				WHEN status.massnahme_status_kurzbz = \'declined\' THEN 5
 			END
-	
+
 	';
 
 $filterWidgetArray = array(
@@ -124,8 +124,8 @@ $filterWidgetArray = array(
 		bezeichnung: {width: "400"},
 		status_bezeichnung: {width: "100"},
 		massnahme_status_kurzbz: {visible: false},
-		anmerkung: {visible: true},
-		anmerkung_stgl: {visible: true, width: "220"},
+		anmerkung: {visible: true, tooltip: true},
+		anmerkung_stgl: {visible: true, width: "220", tooltip: true},
 		studiensemester: {width: "220"},
 		document: {visible: false},
 		akzeptieren: {formatter: form_status, align:"center", width: "150"},

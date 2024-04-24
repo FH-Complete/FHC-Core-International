@@ -15,10 +15,9 @@ class Massnahmen extends Auth_Controller
 	{
 		parent::__construct(array(
 				'index' => self::BERECHTIGUNG_KURZBZ .':rw',
-				'addMassnahme' => self::BERECHTIGUNG_KURZBZ .':rw',
-				'updateMassnahme' => self::BERECHTIGUNG_KURZBZ .':rw',
+				'handleSave' => self::BERECHTIGUNG_KURZBZ .':rw',
 				'deleteMassnahme' => self::BERECHTIGUNG_KURZBZ .':rw',
-				'showMassnahme' => self::BERECHTIGUNG_KURZBZ .':rw'
+				'load' => self::BERECHTIGUNG_KURZBZ .':rw',
 			)
 		);
 
@@ -36,6 +35,7 @@ class Massnahmen extends Auth_Controller
 		$this->load->library('DmsLib');
 		$this->_ci->load->model('extensions/FHC-Core-International/Internatmassnahme_model', 'InternatmassnahmeModel');
 		$this->_ci->load->model('extensions/FHC-Core-International/Internatmassnahmezuordnung_model', 'InternatmassnahmezuordnungModel');
+		$this->_ci->load->model('system/Sprache_model', 'SpracheModel');
 
 		$this->setControllerId(); // sets the controller id
 		$this->_setAuthUID();
@@ -46,14 +46,45 @@ class Massnahmen extends Auth_Controller
 		$this->_ci->load->view('extensions/FHC-Core-International/massnahmen/massnahmen.php');
 	}
 
-	public function addMassnahme()
+	public function load()
 	{
-		$bezeichnung = $this->_ci->input->post('bezeichnung');
-		$bezeichnungeng = $this->_ci->input->post('bezeichnungeng');
-		$ects = $this->_ci->input->post('ects');
-		$beschreibung = $this->_ci->input->post('beschreibung');
-		$beschreibungeng = $this->_ci->input->post('beschreibungeng');
-		$aktiv = $this->_ci->input->post('aktiv');
+		$this->_ci->SpracheModel->addSelect('index');
+		$result = $this->_ci->SpracheModel->loadWhere(array('sprache' => getUserLanguage()));
+
+		$language =  hasData($result) ? getData($result)[0]->index : 1;
+
+		$this->_ci->InternatmassnahmeModel->addSelect(
+			'massnahme_id, 
+			bezeichnung_mehrsprachig[(' . $language . ')] as bezeichnungshow,
+			beschreibung_mehrsprachig[(' . $language . ')] as beschreibungshow,
+			bezeichnung_mehrsprachig[(1)] as bezeichnung,
+			bezeichnung_mehrsprachig[(2)] as bezeichnungeng,
+			beschreibung_mehrsprachig[(1)] as beschreibung,
+			beschreibung_mehrsprachig[(2)] as beschreibungeng,
+			ects,
+			aktiv'
+		);
+
+		$this->_ci->InternatmassnahmeModel->addOrder('aktiv, ects', 'DESC');
+		$this->outputJson($this->_ci->InternatmassnahmeModel->load());
+	}
+
+	public function handleSave()
+	{
+		$postJson = $this->getPostJSON();
+		if ($postJson->massnahme_id)
+			return $this->updateMassnahme($postJson);
+		else
+			return $this->addMassnahme($postJson);
+	}
+	private function addMassnahme($postJson)
+	{
+		$bezeichnung = $postJson->bezeichnung;
+		$bezeichnungeng = $postJson->bezeichnungeng;
+		$ects = $postJson->ects;
+		$beschreibung = $postJson->beschreibung;
+		$beschreibungeng = $postJson->beschreibungeng;
+		$aktiv = $postJson->aktiv;
 
 		if (isEmptyString($bezeichnung) || isEmptyString($bezeichnungeng) || isEmptyString($ects)
 			|| isEmptyString($beschreibung) || isEmptyString($beschreibungeng))
@@ -69,7 +100,7 @@ class Massnahmen extends Auth_Controller
 				'bezeichnung_mehrsprachig' => $bezeichnungmehrsprachig,
 				'beschreibung_mehrsprachig' => $beschreibungmehrsprachig,
 				'ects' => $ects,
-				'aktiv' => $aktiv === 'true',
+				'aktiv' => $aktiv,
 				'insertamum' => date('Y-m-d H:i:s'),
 				'insertvon' => $this->_uid
 			)
@@ -78,30 +109,35 @@ class Massnahmen extends Auth_Controller
 		if (isError($insert))
 			$this->terminateWithJsonError(getError($insert));
 
+		$this->_ci->SpracheModel->addSelect('index');
+		$result = $this->_ci->SpracheModel->loadWhere(array('sprache' => getUserLanguage()));
 
-		$bezeichnung = getUserLanguage() === 'German' ? $bezeichnung : $bezeichnungeng;
-		$beschreibung = getUserLanguage() === 'German' ? $beschreibung : $beschreibungeng;
-		$this->outputJsonSuccess(array
-			(
-				'massnahme_id' => $insert->retval,
-				'bezeichnung' => $bezeichnung,
-				'beschreibung' => $beschreibung,
-				'aktiv' => $aktiv,
-				'ects' => $ects
-			)
+		$language =  hasData($result) ? getData($result)[0]->index : 1;
+
+		$this->_ci->InternatmassnahmeModel->addSelect(
+			'massnahme_id, 
+			bezeichnung_mehrsprachig[(' . $language . ')] as bezeichnungshow,
+			beschreibung_mehrsprachig[(' . $language . ')] as beschreibungshow,
+			bezeichnung_mehrsprachig[(1)] as bezeichnung,
+			bezeichnung_mehrsprachig[(2)] as bezeichnungeng,
+			beschreibung_mehrsprachig[(1)] as beschreibung,
+			beschreibung_mehrsprachig[(2)] as beschreibungeng,
+			ects,
+			aktiv'
 		);
 
+		$this->outputJsonSuccess($this->_ci->InternatmassnahmeModel->loadWhere(array('massnahme_id' =>  $insert->retval)));
 	}
 
-	public function updateMassnahme()
+	public function updateMassnahme($postJson)
 	{
-		$massnahmeid = $this->_ci->input->post('hiddenmassnahmenid');
-		$bezeichnung = $this->_ci->input->post('bezeichnung');
-		$bezeichnungeng = $this->_ci->input->post('bezeichnungeng');
-		$ects = $this->_ci->input->post('ects');
-		$beschreibung = $this->_ci->input->post('beschreibung');
-		$beschreibungeng = $this->_ci->input->post('beschreibungeng');
-		$aktiv = $this->_ci->input->post('aktiv');
+		$massnahmeid = $postJson->massnahme_id;
+		$bezeichnung = $postJson->bezeichnung;
+		$bezeichnungeng = $postJson->bezeichnungeng;
+		$ects = $postJson->ects;
+		$beschreibung = $postJson->beschreibung;
+		$beschreibungeng = $postJson->beschreibungeng;
+		$aktiv = $postJson->aktiv;
 
 		if (isEmptyString($bezeichnung) || isEmptyString($bezeichnungeng) || isEmptyString($ects)
 			|| isEmptyString($beschreibung) || isEmptyString($beschreibungeng))
@@ -119,11 +155,12 @@ class Massnahmen extends Auth_Controller
 				'bezeichnung_mehrsprachig' => $bezeichnungmehrsprachig,
 				'beschreibung_mehrsprachig' => $beschreibungmehrsprachig,
 				'ects' => $ects,
-				'aktiv' => $aktiv === 'true',
+				'aktiv' => $aktiv,
 				'updateamum' => date('Y-m-d H:i:s'),
 				'updatevon' => $this->_uid
 			)
 		);
+
 
 		if (isError($insert))
 			$this->terminateWithJsonError(getError($insert));
@@ -133,9 +170,15 @@ class Massnahmen extends Auth_Controller
 
 	public function deleteMassnahme()
 	{
-		$massnahmenID = $this->_ci->input->post('massnahmeID');
 
-		if (isEmptyString($massnahmenID))
+		$postJson = $this->getPostJSON();
+
+		if (!isset($postJson->massnahme_id))
+			$this->terminateWithJsonError($this->_ci->p->t('ui', 'errorFelderFehlen'));
+
+		$massnahmenID = $postJson->massnahme_id;
+
+		if (isEmptyString((string)$massnahmenID))
 			$this->terminateWithJsonError($this->_ci->p->t('ui', 'errorFelderFehlen'));
 
 		$massnahmenZuordnungen = $this->_ci->InternatmassnahmezuordnungModel->load(array('massnahme_id' => $massnahmenID));
@@ -152,52 +195,6 @@ class Massnahmen extends Auth_Controller
 			$this->terminateWithJsonError(getError($delete));
 
 		$this->outputJsonSuccess('Success');
-	}
-
-	public function showMassnahme()
-	{
-		$this->_setNavigationMenuShowDetails();
-
-		$massnahme_id = $this->_ci->input->get('massnahme_id');
-
-		if (!is_numeric($massnahme_id))
-			$this->terminateWithJsonError('massnahme id is not numeric!');
-
-		$massnahmeexists = $this->_ci->InternatmassnahmeModel->load(array($massnahme_id));
-
-		if (isError($massnahmeexists))
-			$this->terminateWithJsonError(getError($massnahmeexists));
-
-		if (!hasData($massnahmeexists))
-			$this->terminateWithJsonError('Massnahme does not exist!');
-
-		$massnahmeexists = getData($massnahmeexists)[0];
-
-		$this->_ci->load->view('extensions/FHC-Core-International/massnahmen/massnahmenDetails.php', array('massnahme' => $massnahmeexists));
-	}
-
-	private function _setNavigationMenuShowDetails()
-	{
-		$this->load->library('NavigationLib', array('navigation_page' => 'extensions/FHC-Core-International/Massnahmen/showMassnahme'));
-
-		$link = site_url('extensions/FHC-Core-International/Massnahmen');
-
-		$this->_ci->navigationlib->setSessionMenu(
-			array(
-				'back' => $this->_ci->navigationlib->oneLevel(
-					'Zurück',		// description
-					$link,			// link
-					array(),		// children
-					'angle-left',	// icon
-					true,			// expand
-					null, 			// subscriptDescription
-					null, 			// subscriptLinkClass
-					null, 			// subscriptLinkValue
-					'', 			// target
-					1 				// sort
-				)
-			)
-		);
 	}
 
 	private function _setAuthUID()

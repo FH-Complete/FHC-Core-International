@@ -3,52 +3,25 @@ $this->load->view(
 	'templates/FHC-Header',
 	array(
 		'title' => 'International-Massnahmen',
-		'jquery3' => true,
-		'jqueryui1' => true,
-		'bootstrap3' => true,
-		'fontawesome4' => true,
-		'tablewidget' => true,
-		'tabulator4' => true,
-		'ajaxlib' => true,
-		'dialoglib' => true,
-		'navigationwidget' => true,
+		'vue3' => true,
+		'bootstrap5' => true,
+		'primevue3' => true,
+		'tabulator5' => true,
+		'fontawesome6' => true,
+		'axios027' => true,
 		'phrases' => array(
-			'ui' => array(
-				'global',
-				'ui',
-				'international',
-				'lehre'
-			)
+			'international',
 		),
-		'customJSs' => array(
-			'public/extensions/FHC-Core-International/js/massnahmen.js',
-			'public/js/bootstrapper.js',
+		'customJSModules' => array(
+			'public/extensions/FHC-Core-International/js/apps/MassnahmenApp.js',
 		)
 	)
 );
 ?>
 <body>
-<div id="wrapper">
-	<?php echo $this->widgetlib->widget('NavigationWidget'); ?>
-	<div id="page-wrapper">
-		<div class="container-fluid">
-			<div class="row">
-				<div class="col-lg-12">
-					<h3 class="page-header">
-						<?php echo $this->p->t('international', 'massnahmen'); ?>
-					</h3>
-				</div>
-			</div>
-			<div>
-				<?php $this->load->view('extensions/FHC-Core-International/massnahmen/massnahmenData.php'); ?>
-			</div>
-			<div>
-				<?php $this->load->view('extensions/FHC-Core-International/massnahmen/massnahmenAdd.php'); ?>
-			</div>
-		</div>
-	</div>
+<div id="main">
+	<massnahmen></massnahmen>
 </div>
 </body>
 
 <?php $this->load->view('templates/FHC-Footer'); ?>
-

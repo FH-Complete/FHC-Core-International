@@ -613,7 +613,7 @@ export default {
 				:hideTopMenu=false
 			></core-filter-cmpt>
 			
-			<bs-modal ref="absageModal" class="bootstrap-prompt" dialogClass="modal-lg" @hidden-bs-modal="reset">>
+			<bs-modal ref="absageModal" class="bootstrap-prompt" dialogClass="modal-lg" @hidden-bs-modal="reset">
 				<template #title>{{ modalTitle }}</template>
 				<template #default>
 					<div class="row">

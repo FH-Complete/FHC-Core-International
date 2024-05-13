@@ -331,7 +331,7 @@ export default {
 				@click:new="addMassnahmeContainer"
 			></core-filter-cmpt>
 
-			<bs-modal ref="addMassnahmeModel" class="bootstrap-prompt" dialogClass="modal-xl" @hidden-bs-modal="reset">>
+			<bs-modal ref="addMassnahmeModel" class="bootstrap-prompt" dialogClass="modal-xl" @hidden-bs-modal="reset">
 				<template #title>{{ $p.t('international', 'addMassnahme') }}</template>
 				<template #default>
 					<div class="row row-cols-2">

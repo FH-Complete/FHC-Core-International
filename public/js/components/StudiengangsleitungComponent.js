@@ -275,7 +275,7 @@ export default {
 			button.title = this.$p.t('international', title);
 			button.innerHTML = "<i class='"+ icon +"' aria-hidden = 'true'></i>";
 
-			this.modalTitle = title;
+			this.modalTitle = this.$p.t('international', title);
 
 			let rowData = {
 				'massnahme_id' : massnahme,
@@ -327,14 +327,37 @@ export default {
 		acceptAll() {
 			var rows = this.$refs.massnahmenTable.tabulator.getSelectedRows();
 
+			var data = [];
 			rows.forEach((row) => {
 				if (row.getData().massnahme_status_kurzbz === this.selectableStatus)
 				{
-					var data = {
-						'massnahme_id' : row.getData().massnahme_zuordnung_id,
-						'status': 'accepted'
-					};
-					this.setStatus(data);
+					data.push({
+						massnahme_id: row.getData().massnahme_zuordnung_id,
+						status: 'accepted'
+					});
+				}
+			});
+			this.setStatusMulti(data, rows);
+		},
+		setStatusMulti (data, rows)
+		{
+			Vue.$fhcapi.Studiengangsleitung.setStatus(data).then(response => {
+				if (CoreRESTClient.isSuccess(response.data))
+				{
+					let data = CoreRESTClient.getData(response.data)
+					rows.forEach((row) => {
+						row.update(
+							{
+								'massnahme_status_kurzbz' : data.statusKurz,
+								'akzeptieren': data.statusKurz,
+								'massnahme_akzeptieren': data.statusKurz,
+								'status_bezeichnung' : data.status_bezeichnung
+							}
+						)
+					});
+
+					this.$refs.massnahmenTable.tabulator.deselectRow();
+					this.$fhcAlert.alertSuccess("Erfolgreich gesetzt");
 				}
 			});
 		},
@@ -655,7 +678,7 @@ export default {
 						<button @click="currentSemester" class="btn btn-secondary btn-sm" type="button" :title="$p.t('international', 'alleStudierendeJetzt')"><i class='fa-solid fa-calendar'></i></button>
 						<button @click="lastSemester" class="btn btn-secondary btn-sm" type="button" :title="$p.t('international', 'lastSemester')"><i class='fa-solid fa-clock'></i></button>
 						<button @click="showUploaded" class="btn btn-secondary btn-sm" type="button" :title="$p.t('international', 'alledurchgefuehrten')"><i class='fa-solid fa-check'></i></button>
-						<button @click="deleteFilter" class="btn btn-secondary btn-sm" type="button" :title="$p.t('international', 'alleAnzeigen')"><i class='fa-solid fa-users'></i></button>
+						<button @click="deleteFilter" class="btn btn-secondary btn-sm" type="button" :title="$p.t('ui', 'alleAnzeigen')"><i class='fa-solid fa-users'></i></button>
 					  </div>
 				</div>
 			</div>

@@ -121,9 +121,47 @@ class Studiengangsleitung extends Auth_Controller
 		$this->outputJson($this->_ci->InternatmassnahmezuordnungModel->getDataStudiengangsleitungBenotung($studiengang, $studiensemester));
 	}
 
+	private function _setStatusMulti($data)
+	{
+		$language = getUserLanguage() == 'German' ? 0 : 1;
+		$status_bezeichnung = '';
+		$statusKurz = '';
+
+		foreach ($data as $massnahme)
+		{
+			if (isset($massnahme->massnahme_id) && isset($massnahme->status))
+			{
+				$massnahmeZuordnung = $this->_checkMassnahmenZuordnung($massnahme->massnahme_id);
+
+				$status = $this->checkStatus($massnahmeZuordnung->massnahme_status_kurzbz, $massnahme->status);
+				$statusKurz = $status->massnahme_status_kurzbz;
+				$status_bezeichnung = $status->bezeichnung_mehrsprachig[$language];
+
+				$insertStatus = $this->_ci->InternatmassnahmezuordnungstatusModel->insert(
+					array(
+						'massnahme_zuordnung_id' => $massnahmeZuordnung->massnahme_zuordnung_id,
+						'datum' => date ('Y-m-d'),
+						'massnahme_status_kurzbz' => $statusKurz,
+						'insertamum' => date('Y-m-d H:i:s'),
+						'insertvon' => $this->_uid
+					)
+				);
+				if (isError($insertStatus))
+					$this->terminateWithJsonError(getError($insertStatus));
+
+				$this->sendMail($massnahmeZuordnung->massnahme_zuordnung_id);
+			}
+		}
+		$this->outputJsonSuccess(array('status_bezeichnung' => $status_bezeichnung, 'statusKurz' => $statusKurz));
+	}
+
 	public function setStatus()
 	{
 		$postJson = $this->getPostJSON();
+
+		if (is_array($postJson))
+			return $this->_setStatusMulti($postJson);
+
 		$massnahmeZuordnungPost = $postJson->massnahme_id;
 		$statusPost = $postJson->status;
 		$absagePost = isset($postJson->absageGrund) ? $postJson->absageGrund : '';

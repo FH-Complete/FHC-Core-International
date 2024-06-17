@@ -598,32 +598,32 @@ export default {
 		<template #main>
 			<div class="row">
 				<div class="col-md-2">
-					<select v-model="selectedStg" class="form-control" @change="updateTabulatorFilter(); updateLVsDropdown()">
+					<select v-model="selectedStg" class="form-select" @change="updateTabulatorFilter(); updateLVsDropdown()">
 						<option value="">{{ $p.t('lehre', 'studiengang') }}</option>
 						<option v-for="stg in stgs" :value="stg.studiengang_kz">{{ stg.kurzbzlang }}</option>
 					</select>
 				</div>
 				<div class="col-md-2">
-					<button @click="toggleNotenUbernahme" class="btn btn-secondary btn-sm">Notenübernahme</button>
+					<button @click="toggleNotenUbernahme" :disabled="selectedStg === ''" class="btn btn-primary">Notenübernahme</button>
 				</div>
 			</div>
 			<hr />
 			<div class="row" v-if="notenUebernahme">
 				<div class="col-md-2">
-					<select v-model="getSem" class="form-control" @change="updateLVsDropdown(); openNotenUebernahme()">
+					<select v-model="getSem" class="form-select" @change="updateLVsDropdown(); openNotenUebernahme()">
 						<option value="">{{ $p.t('lehre', 'studiensemester') }}</option>
 						<option v-for="stsem in stsems" :value="stsem.studiensemester_kurzbz">{{ stsem.studiensemester_kurzbz }}</option>
 					</select>
 				</div>
 				<div class="col-md-2">
-					<select v-model="selectedLv" class="form-control">
+					<select v-model="selectedLv" class="form-select">
 						<option value="">{{ $p.t('lehre', 'lehrveranstaltung') }}</option>
 						<option v-for="lv in filteredLvs" :value="lv.lehrveranstaltung_id">{{ lv.bezeichnung }}</option>
 					</select>
 				</div>
 				
 				<div class="col-md-4 justify-content: space-between;">
-					<button @click="noteSetzen" class="btn btn-secondary" type="button"> Note Übernehmen </button>
+					<button @click="noteSetzen" class="btn btn-primary" type="button"> Note Übernehmen </button>
 				</div>
 			</div>
 			
@@ -661,24 +661,24 @@ export default {
 			<div class="row">
 
 				<div class="col-md-6 d-flex gap-2">
-					<button @click="selectAll" class="btn btn-secondary btn-sm" type="button"> {{ $p.t('international', 'alleGeplantenMarkieren') }} </button>
-					<button @click="acceptAll" class="btn btn-secondary btn-sm" type="button"> {{ $p.t('international', 'alleAkzeptierenPlan') }} </button>
+					<button @click="selectAll" class="btn btn-secondary" type="button"> {{ $p.t('international', 'alleGeplantenMarkieren') }} </button>
+					<button @click="acceptAll" class="btn btn-secondary" type="button"> {{ $p.t('international', 'alleAkzeptierenPlan') }} </button>
 				</div>
 			</div>
 			<br />
 			<div class="col-xs-12">
-				<div class="btn-toolbar" role="toolbar" aria-label="Toolbar with button groups">
+				<div class="btn-toolbar" role="toolbar">
 					  <div class="btn-group me-2" role="group" aria-label="First group">
-						<button @click="plannedMore" class="btn btn-secondary btn-sm" type="button" :title="$p.t('international', 'mehrverplant')"><i class='fa-solid fa-calendar-plus'></i></button>
-						<button @click="plannedLess" class="btn btn-secondary btn-sm" type="button" :title="$p.t('international', 'wenigerverplant')"><i class='fa-solid fa-calendar-minus'></i></button>
-						<button @click="confirmedMore" class="btn btn-secondary btn-sm" type="button" :title="$p.t('international', 'mehrbestaetigt')"><i class='fa-solid fa-calendar-check'></i></button>
-						<button @click="confirmedLess" class="btn btn-secondary btn-sm" type="button" :title="$p.t('international','wenigerbestaetigt')"><i class='fa-solid fa-calendar-times'></i></button>
-						<button @click="showOpen" class="btn btn-secondary btn-sm" type="button" :title="$p.t('international', 'allegeplanten')"><i class='fa-solid fa-calendar'></i></button>
-						<button @click="currentOpenSemester" class="btn btn-secondary btn-sm" type="button" :title="$p.t('international', 'alleMassnahmenJetzt')"><i class='fa-solid fa-clock'></i></button>
-						<button @click="currentSemester" class="btn btn-secondary btn-sm" type="button" :title="$p.t('international', 'alleStudierendeJetzt')"><i class='fa-solid fa-calendar'></i></button>
-						<button @click="lastSemester" class="btn btn-secondary btn-sm" type="button" :title="$p.t('international', 'lastSemester')"><i class='fa-solid fa-clock'></i></button>
-						<button @click="showUploaded" class="btn btn-secondary btn-sm" type="button" :title="$p.t('international', 'alledurchgefuehrten')"><i class='fa-solid fa-check'></i></button>
-						<button @click="deleteFilter" class="btn btn-secondary btn-sm" type="button" :title="$p.t('ui', 'alleAnzeigen')"><i class='fa-solid fa-users'></i></button>
+						<button @click="plannedMore" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'mehrverplant')"><i class='fa-solid fa-calendar-plus's></i></button>
+						<button @click="plannedLess" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'wenigerverplant')"><i class='fa-solid fa-calendar-minus'></i></button>
+						<button @click="confirmedMore" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'mehrbestaetigt')"><i class='fa-solid fa-calendar-check'></i></button>
+						<button @click="confirmedLess" class="btn btn-outline-secondary" type="button" :title="$p.t('international','wenigerbestaetigt')"><i class='fa-solid fa-calendar-times'></i></button>
+						<button @click="showOpen" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'allegeplanten')"><i class='fa-solid fa-calendar'></i></button>
+						<button @click="currentOpenSemester" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'alleMassnahmenJetzt')"><i class='fa-solid fa-clock'></i></button>
+						<button @click="currentSemester" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'alleStudierendeJetzt')"><i class='fa-solid fa-calendar'></i></button>
+						<button @click="lastSemester" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'lastSemester')"><i class='fa-solid fa-clock'></i></button>
+						<button @click="showUploaded" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'alledurchgefuehrten')"><i class='fa-solid fa-check'></i></button>
+						<button @click="deleteFilter" class="btn btn-outline-secondary" type="button" :title="$p.t('ui', 'alleAnzeigen')"><i class='fa-solid fa-users'></i></button>
 					  </div>
 				</div>
 			</div>

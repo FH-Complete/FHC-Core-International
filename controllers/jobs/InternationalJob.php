@@ -42,24 +42,27 @@ class InternationalJob extends JOB_Controller
 			if (hasData($studiengang))
 			{
 				$studiengang = getData($studiengang)[0];
-				
-				foreach ($stglMails as $stglMail)
+
+				if (!isEmptyArray($stglMails))
 				{
-					$body_fields = array(
-						'vorname' => $stglMail['vorname'],
-						'nachname' => $stglMail['nachname'],
-						'studiengang' => $studiengang->bezeichnung,
-						'datentabelle' => $content,
-						'link' => anchor(site_url('extensions/FHC-Core-International/Studiengangsleitung'), 'International Skills')
-					);
-					
-					// Send mail
-					sendSanchoMail(
-						'InternationalOverview',
-						$body_fields,
-						$stglMail['to'],
-						'International Skills: Update'
-					);
+					foreach ($stglMails as $stglMail)
+					{
+						$body_fields = array(
+							'vorname' => $stglMail['vorname'],
+							'nachname' => $stglMail['nachname'],
+							'studiengang' => $studiengang->bezeichnung,
+							'datentabelle' => $content,
+							'link' => anchor(site_url('extensions/FHC-Core-International/Studiengangsleitung'), 'International Skills')
+						);
+
+						// Send mail
+						sendSanchoMail(
+							'InternationalOverview',
+							$body_fields,
+							$stglMail['to'],
+							'International Skills: Update'
+						);
+					}
 				}
 			}
 		}
@@ -129,10 +132,15 @@ class InternationalJob extends JOB_Controller
 			if (hasData($result))
 			{
 				$result = getData($result)[0];
-				return array(
-					$result->email,
-					''
-				);
+				if (!isEmptyString($result->email))
+				{
+					$stglMails[] = array(
+						'to' => $result->email,
+						'vorname' => '',
+						'nachname' => '',
+					);
+					return $stglMails;
+				}
 			}
 		}
 	}

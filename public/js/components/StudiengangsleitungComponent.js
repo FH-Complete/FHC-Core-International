@@ -3,6 +3,7 @@ import {CoreRESTClient} from '../../../../js/RESTClient.js';
 import CoreBaseLayout from '../../../../js/components/layout/BaseLayout.js';
 import BsModal from '../../../../js/components/Bootstrap/Modal.js';
 import FormInput from "../../../../js/components/Form/Input.js";
+import FhcLoader from '../../../../js/components/Loader.js';
 
 export default {
 	name: 'Studiengangsleitung',
@@ -20,10 +21,6 @@ export default {
 			type: Array,
 			required: true
 		},
-		lvs : {
-			type: Array,
-			required: true
-		},
 		aktstsem : {
 			type: String,
 			required: true
@@ -33,7 +30,27 @@ export default {
 		CoreFilterCmpt,
 		CoreBaseLayout,
 		BsModal,
-		FormInput
+		FormInput,
+		FhcLoader
+	},
+	watch: {
+		selectedStg(newVal) {
+			this.updateTabulatorFilter();
+		},
+		getSem(newVal) {
+			this.openNotenUebernahme();
+		},
+		selectedOrgform(newVal, oldValue) {
+			if (newVal === "")
+				this._removeOrgFilter(oldValue)
+			else
+				this._setFilter(this.filteredUids, newVal);
+
+			this.filterLVsDropdown();
+
+			/*this.filterLVsDropdown();
+			this.openNotenUebernahme();*/
+		}
 	},
 	data: function() {
 		return {
@@ -52,8 +69,11 @@ export default {
 				title: '',
 			},
 			phrasesLoaded: null,
-
+			groupsCollapsed: false,
 			sideMenuEntries: {},
+			selectedOrgform: "",
+			orgformen: "",
+			filteredUids: [],
 		}
 	},
 	async created() {
@@ -90,7 +110,7 @@ export default {
 				selectablePersistence: false,
 				initialFilter: {},
 				selectableCheck: (row) => {
-					return row.getData().massnahme_status_kurzbz === this.selectableStatus;
+					return row.getData().massnahme_status_kurzbz === this.selectableStatus || (!row.getData().massnahme_status_kurzbz && row.getData().kontakt !== undefined);
 				},
 				groupHeader: function(value, count, data, group)
 				{
@@ -134,6 +154,7 @@ export default {
 
 				columns: [
 					{title: this.$p.t('lehre', 'studiengang'), field: 'studiengang_kurz', headerFilter: true},
+					{title: this.$p.t('lehre', 'organisationsform'), field: 'orgform', headerFilter: true},
 					{title:  this.$p.t('person', 'uid'), field: 'student_uid', headerFilter: true, width: 150},
 					{title: this.$p.t('person', 'vorname'), field: 'vorname', headerFilter: true, width: 120},
 					{title: this.$p.t('person', 'nachname'), field: 'nachname', headerFilter: true, width: 120},
@@ -262,6 +283,10 @@ export default {
 			set(value) {
 				this.selectedStsem = value;
 			}
+		},
+		iconClass()
+		{
+			return this.notenUebernahme ? 'fa-solid fa-caret-up' : 'fa-solid fa-caret-down';
 		}
 	},
 	methods: {
@@ -339,6 +364,19 @@ export default {
 			});
 			this.setStatusMulti(data, rows);
 		},
+		sendMail() {
+
+			const selectedRows = this.$refs.massnahmenTable.tabulator.getSelectedRows();
+			let emails = []
+			selectedRows.forEach(row => {
+				let rowData = row.getData()
+
+
+				if (!emails.includes(rowData.student_uid))
+					emails.push(rowData.student_uid + "@technikum-wien.at")
+			})
+			window.location.href = `mailto:?bcc=${emails}`;
+		},
 		setStatusMulti (data, rows)
 		{
 			Vue.$fhcapi.Studiengangsleitung.setStatus(data).then(response => {
@@ -397,9 +435,27 @@ export default {
 				}
 			});
 		},
-		_setFilter(uids)
+		_setFilter(uids, withOrgForm = false)
 		{
 			this.$refs.massnahmenTable.tabulator.setFilter("student_uid", "in", uids);
+
+			if (withOrgForm)
+				this.$refs.massnahmenTable.tabulator.addFilter("orgform", "=", this.selectedOrgform)
+			var rows = this.$refs.massnahmenTable.tabulator.getRows("active");
+
+			rows.forEach((row) => {
+				var rowData = row.getData();
+				if (this.filteredUids.includes(rowData.student_uid) && rowData.massnahme_status_kurzbz === this.selectableStatus && !rowData.note)
+				{
+					row.select();
+				}
+			});
+
+
+		},
+		_removeOrgFilter(oldOrg)
+		{
+			this.$refs.massnahmenTable.tabulator.removeFilter("orgform", "=", oldOrg)
 		},
 		plannedMore()
 		{
@@ -456,16 +512,16 @@ export default {
 		},
 		currentSemester()
 		{
-			this.$refs.massnahmenTable.tabulator.setFilter("student_studiensemester", "=", this.stsem);
+			this.$refs.massnahmenTable.tabulator.setFilter("student_studiensemester", "=", this.aktstsem);
 		},
 		currentOpenSemester()
 		{
-			this.$refs.massnahmenTable.tabulator.setFilter("studiensemester", "=", this.stsem);
+			this.$refs.massnahmenTable.tabulator.setFilter("studiensemester", "=", this.aktstsem);
 		},
 		lastSemester()
 		{
 			this.$refs.massnahmenTable.tabulator.setFilter([
-					{field: "student_studiensemester", type: "=", value: this.stsem},
+					{field: "student_studiensemester", type: "=", value: this.aktstsem},
 					{field: "semester", type: "=", value:  "max_semester"}
 				]
 			);
@@ -480,35 +536,40 @@ export default {
 		{
 			this.notenUebernahme = true;
 
+			if (!this.selectedStg || !this.getSem)
+				return;
+
 			let data = {
 				stg: this.selectedStg,
 				stsem: this.getSem
 			}
-			Vue.$fhcapi.Studiengangsleitung.loadBenotung(data).then(response => {
+			this.$refs.loader.show();
+			this.getOrgForms(data)
+				.then(() => this.getLVs(data))
+				.then(() => this.loadBenotung(data))
+				.then(() => this.$refs.loader.hide());
+		},
+		async loadBenotung(data)
+		{
+			this.selectableStatus = 'confirmed';
+			await Vue.$fhcapi.Studiengangsleitung.loadBenotung(data).then(response => {
 				if (CoreRESTClient.isSuccess(response.data))
 				{
 					if (CoreRESTClient.hasData(response.data))
 					{
 						let responseData = CoreRESTClient.getData(response.data);
-						var uids = responseData.map(function(obj) {
+						this.filteredUids = responseData.map(function(obj) {
 							return obj['student_uid'];
 						});
-						this._setFilter(uids);
+						this._setFilter(this.filteredUids);
 
-						this.selectableStatus = 'confirmed';
-						var rows = this.$refs.massnahmenTable.tabulator.getRows();
-						rows.forEach((row) => {
-							var rowData = row.getData();
-							if (uids.includes(rowData.student_uid) && rowData.massnahme_status_kurzbz === this.selectableStatus && !rowData.note)
-							{
-								row.select();
-							}
-						});
+
 						this.$refs.massnahmenTable.tabulator.showColumn('note');
 					}
 					else
 					{
 						this._setFilter(['']);
+						this.filteredUids = [''];
 					}
 				}
 			});
@@ -528,30 +589,76 @@ export default {
 			else
 				this.closeNotenUebernahme();
 		},
-		updateLVsDropdown()
+		async getOrgForms(data)
 		{
-			if (this.selectedStg && this.getSem)
-			{
-				this.filteredLvs = this.lvs.filter(lv => lv.studiengang_kz === this.selectedStg);
-
-				const preselectedLv = this.filteredLvs.find(lv => lv.bezeichnung === 'International Skills');
-				if (preselectedLv)
+			await Vue.$fhcapi.Studiengangsleitung.getOrgForms(data).then(response => {
+				if (CoreRESTClient.isSuccess(response.data))
 				{
-					this.selectedLv = preselectedLv.lehrveranstaltung_id;
+					if (CoreRESTClient.hasData(response.data))
+					{
+						this.orgformen = CoreRESTClient.getData(response.data)
+						if (this.orgformen.length === 1)
+							this.selectedOrgform = this.orgformen[0].orgform_kurzbz;
+						else
+						{
+							this.selectedOrgform = "";
+						}
+					}
+					else
+					{
+						this.orgformen = [];
+						this.selectedOrgform = "";
+						this.selectedLv = '';
+						this.filteredLvs = [];
+					}
 				}
 				else
 				{
+					this.orgformen = [];
+					this.selectedOrgform = "";
+					this.selectedLv = '';
+					this.filteredLvs = [];
+				}
+			})
+		},
+		async getLVs(data)
+		{
+			await Vue.$fhcapi.Studiengangsleitung.getLvs(data).then(response => {
+				if (CoreRESTClient.isSuccess(response.data))
+				{
+					if (CoreRESTClient.hasData(response.data))
+						this.filteredLvs = CoreRESTClient.getData(response.data)
+					else
+						this.filteredLvs = [];
+				}
+				else
+				{
+					this.filteredLvs = [];
 					this.selectedLv = '';
 				}
+			});
+		},
+		filterLVsDropdown()
+		{
+			const preselectedLv = this.filteredLvs.find(
+				lv => lv.bezeichnung === 'International Skills'
+					&&
+					lv.orgform_kurzbz === this.selectedOrgform
+			);
+			if (preselectedLv)
+			{
+				this.selectedLv = preselectedLv.lehrveranstaltung_id;
 			}
 			else
 			{
-				this.filteredLvs = [];
 				this.selectedLv = '';
 			}
 		},
 		noteSetzen ()
 		{
+
+			if (this.selectedStg === "" || this.selectedLv === "" || this.getSem === "")
+				return this.$fhcAlert.alertWarning("Studiensemester/Orgform und LV auswählen!");
 			let selectedData = this.$refs.massnahmenTable.tabulator.getSelectedData();
 			let changedData = []
 			selectedData.forEach((data,i) => {
@@ -572,6 +679,7 @@ export default {
 			this.setNote(changedData);
 		},
 		setNote(changedData){
+			this.$refs.loader.show();
 			Vue.$fhcapi.Studiengangsleitung.setNote(changedData).then(response => {
 				if (CoreRESTClient.isSuccess(response.data))
 				{
@@ -585,11 +693,39 @@ export default {
 								});
 							}
 						});
+
 					});
+					this.$refs.loader.hide();
 					this.$fhcAlert.alertSuccess("Note erfolgreich gesetzt");
 				}
 			});
 		},
+		collapseGroup()
+		{
+			let oldGroup = this.$refs.massnahmenTable.tabulator.options.groupBy
+			this.$refs.massnahmenTable.tabulator.setGroupStartOpen(!this.$refs.massnahmenTable.tabulator.options.groupStartOpen);
+
+			if (this.$refs.massnahmenTable.tabulator.options.groupStartOpen)
+			{
+
+				document.getElementById("togglegroup").classList.remove("fa-maximize");
+				document.getElementById("togglegroup").classList.add("fa-minimize");
+			}
+			else
+			{
+				document.getElementById("togglegroup").classList.remove("fa-minimize");
+				document.getElementById("togglegroup").classList.add("fa-maximize");
+			}
+			this.$refs.massnahmenTable.tabulator.setGroupBy("studiengang");
+			this.$refs.massnahmenTable.tabulator.setGroupBy(oldGroup);
+		},
+		collapseOpenGroup()
+		{
+			console.log("test");
+			this.$refs.massnahmenTable.tabulator.setGroupStartOpen(false);
+			/*this.$refs.massnahmenTable.tabulator.getGroups().forEach(group => {console.log(group.collapse())})
+			this.$refs.massnahmenTable.tabulator.getGroups().forEach(group => group.collapse());*/
+		}
 	},
 
 	template: `
@@ -598,35 +734,42 @@ export default {
 		<template #main>
 			<div class="row">
 				<div class="col-md-2">
-					<select v-model="selectedStg" class="form-select" @change="updateTabulatorFilter(); updateLVsDropdown()">
+					<select v-model="selectedStg" class="form-select">
 						<option value="">{{ $p.t('lehre', 'studiengang') }}</option>
 						<option v-for="stg in stgs" :value="stg.studiengang_kz">{{ stg.kurzbzlang }}</option>
 					</select>
 				</div>
 				<div class="col-md-2">
-					<button @click="toggleNotenUbernahme" :disabled="selectedStg === ''" class="btn btn-primary">Notenübernahme</button>
+					<button @click="toggleNotenUbernahme" :disabled="selectedStg === ''" class="btn btn-primary">Notenübernahme <i :class="iconClass"></i></button>
 				</div>
 			</div>
 			<hr />
 			<div class="row" v-if="notenUebernahme">
 				<div class="col-md-2">
-					<select v-model="getSem" class="form-select" @change="updateLVsDropdown(); openNotenUebernahme()">
+					<select v-model="getSem" class="form-select">
 						<option value="">{{ $p.t('lehre', 'studiensemester') }}</option>
 						<option v-for="stsem in stsems" :value="stsem.studiensemester_kurzbz">{{ stsem.studiensemester_kurzbz }}</option>
 					</select>
 				</div>
 				<div class="col-md-2">
+					<select v-model="selectedOrgform" class="form-select">
+						<option value="">{{ $p.t('lehre', 'organisationsform') }}</option>
+						<option v-for="orgform in orgformen" :value="orgform.orgform_kurzbz">{{ orgform.orgform_kurzbz }}</option>
+					</select>
+				</div>
+				<div class="col-md-2">
 					<select v-model="selectedLv" class="form-select">
 						<option value="">{{ $p.t('lehre', 'lehrveranstaltung') }}</option>
-						<option v-for="lv in filteredLvs" :value="lv.lehrveranstaltung_id">{{ lv.bezeichnung }}</option>
+						<option v-for="lv in filteredLvs" :value="lv.lehrveranstaltung_id">{{ lv.bezeichnung }} (LV ID: {{ lv.lehrveranstaltung_id}})</option>
 					</select>
 				</div>
 				
 				<div class="col-md-4 justify-content: space-between;">
 					<button @click="noteSetzen" class="btn btn-primary" type="button"> Note Übernehmen </button>
 				</div>
+				<br />
 			</div>
-			
+		
 			<core-filter-cmpt v-if="phrasesLoaded"
 				ref="massnahmenTable"
 				:tabulator-options="tabulatorOptions"
@@ -634,7 +777,9 @@ export default {
 				@nw-new-entry="newSideMenuEntryHandler"
 				:table-only=true
 				:hideTopMenu=false
-			></core-filter-cmpt>
+			>
+				
+			</core-filter-cmpt>
 			
 			<bs-modal ref="absageModal" class="bootstrap-prompt" dialogClass="modal-lg" @hidden-bs-modal="reset">
 				<template #title>{{ modalTitle }}</template>
@@ -661,8 +806,10 @@ export default {
 			<div class="row">
 
 				<div class="col-md-6 d-flex gap-2">
-					<button @click="selectAll" class="btn btn-secondary" type="button"> {{ $p.t('international', 'alleGeplantenMarkieren') }} </button>
-					<button @click="acceptAll" class="btn btn-secondary" type="button"> {{ $p.t('international', 'alleAkzeptierenPlan') }} </button>
+					<button @click="collapseGroup" class="btn btn-outline-secondary" type="button"><i id="togglegroup" class="fa-solid fa-minimize"></i></button>
+					<button @click="selectAll" class="btn btn-outline-secondary" type="button"> {{ $p.t('international', 'alleGeplantenMarkieren') }} </button>
+					<button @click="acceptAll" class="btn btn-outline-secondary" type="button"> {{ $p.t('international', 'alleAkzeptierenPlan') }} </button>
+					<button @click="sendMail" class="btn btn-outline-secondary" type="button"> {{ $p.t('international', 'mailversenden') }} </button>
 				</div>
 			</div>
 			<br />
@@ -683,7 +830,7 @@ export default {
 				</div>
 			</div>
 		</template>
-		
 	</core-base-layout>
+	<fhc-loader ref="loader" :timeout="0"></fhc-loader>
 	`
 };

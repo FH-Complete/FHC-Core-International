@@ -147,7 +147,15 @@ class Internatmassnahmezuordnung_model extends DB_Model
 					WHERE tbl_student.student_uid = student.student_uid
 						AND tbl_lehrveranstaltung.bezeichnung = ?
 				)
-			) AS "note"
+			) AS "note",
+			(
+				SELECT tbl_prestudentstatus.orgform_kurzbz
+				FROM public.tbl_prestudentstatus
+					LEFT JOIN lehre.tbl_studienplan USING (studienplan_id)
+				WHERE prestudent_id = prestudent.prestudent_id
+				ORDER BY tbl_prestudentstatus.datum DESC, tbl_prestudentstatus.insertamum DESC, tbl_prestudentstatus.ext_id DESC LIMIT 1
+			) as orgform
+			
 			FROM
 		tbl_studentlehrverband
 		JOIN  tbl_student student ON tbl_studentlehrverband.student_uid = student.student_uid
@@ -173,6 +181,7 @@ class Internatmassnahmezuordnung_model extends DB_Model
 			AND tbl_studentlehrverband.studiengang_kz IN ?
 			GROUP BY  student.student_uid,
 				person.person_id,
+				prestudent.prestudent_id,
 				zuordnung.massnahme_zuordnung_id,
 				massnahme.massnahme_id,
 				status.massnahme_status_kurzbz,
@@ -221,7 +230,14 @@ class Internatmassnahmezuordnung_model extends DB_Model
 							get_rolle_prestudent(prestudent.prestudent_id, NULL) = ?
 							AND massnahme_status_kurzbz = ?
 							AND prestudent.studiengang_kz = ?
-							AND prestudentstatus.studiensemester_kurzbz = ?
+							AND ? = (
+								SELECT tbl_prestudentstatus.studiensemester_kurzbz
+								FROM tbl_prestudent
+										 JOIN tbl_prestudentstatus USING (prestudent_id)
+								WHERE tbl_prestudent.prestudent_id = student.prestudent_id
+								ORDER BY tbl_prestudentstatus.datum desc, tbl_prestudentstatus.insertamum desc, tbl_prestudentstatus.ext_id desc
+								LIMIT 1
+							)
 						GROUP BY student.student_uid, massnahme_status_kurzbz, massnahme_id, ects
 					) subquery
 					JOIN campus.vw_student ON vw_student.uid = student_uid

@@ -32,5 +32,21 @@ export default {
 		} catch (error) {
 			throw error;
 		}
+	},
+	getLvs(data)
+	{
+		try {
+			return CoreRESTClient.get('extensions/FHC-Core-International/Studiengangsleitung/getLVs', data);
+		} catch (error) {
+			throw error;
+		}
+	},
+	getOrgForms(data)
+	{
+		try {
+			return CoreRESTClient.get('extensions/FHC-Core-International/Studiengangsleitung/getOrgForms', data);
+		} catch (error) {
+			throw error;
+		}
 	}
 };

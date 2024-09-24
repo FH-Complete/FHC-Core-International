@@ -142,14 +142,16 @@ export default {
 							else if (documentId !== null)
 							{
 								const downloadButton = document.createElement('button');
-								downloadButton.className = 'btn btn fa fa-download';
+								downloadButton.className = 'btn btn';
+								downloadButton.innerHTML = "<i class='fa-solid fa-download' aria-hidden = 'true'></i>";
 								downloadButton.addEventListener('click', () => window.location.href = CoreRESTClient._generateRouterURI('extensions/FHC-Core-International/Student/studentDownloadNachweis?massnahmenZuordnung=' + massnahme));
 
 								div.appendChild(downloadButton);
 
 								if (status !== 'confirmed' && status !== 'declined') {
 									const deleteButton = document.createElement('button');
-									deleteButton.className = 'btn btn fa fa-trash';
+									deleteButton.className = 'btn btn';
+									deleteButton.innerHTML = "<i class='fa-solid fa-trash' aria-hidden = 'true'></i>";
 									deleteButton.addEventListener('click', () => {
 										const data = { 'massnahmenZuordnung': massnahme };
 										this.deleteNachweis(data);
@@ -188,7 +190,7 @@ export default {
 
 	},
 	async created() {
-		await this.$p.loadCategory(['ui', 'international', 'global']).then(() => {
+		await this.$p.loadCategory(['ui', 'international', 'global', 'lehre']).then(() => {
 			this.phrasesLoaded = true;
 		});
 	},
@@ -211,7 +213,6 @@ export default {
 			let button = document.createElement('button');
 			button.className = 'btn btn';
 			button.title = this.$p.t('international', title);
-			//button.label = this.$p.t('international', 'massnahmeLoeschen');
 			button.innerHTML = "<i class='"+ icon +"' aria-hidden = 'true'></i>";
 			return button;
 		},

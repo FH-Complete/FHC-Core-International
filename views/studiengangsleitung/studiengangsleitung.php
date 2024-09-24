@@ -9,6 +9,7 @@ $this->load->view(
 		'tabulator5' => true,
 		'fontawesome6' => true,
 		'axios027' => true,
+		'filtercomponent' => true,
 		'phrases' => array(
 			'international',
 		),
@@ -26,7 +27,6 @@ $this->load->view(
 
 	<studiengangsleitung
 			:stgs="<?= htmlspecialchars(json_encode($studiengaenge)); ?>"
-			:lvs="<?= htmlspecialchars(json_encode($lehrveranstaltungen)); ?>"
 			:stsems="<?= htmlspecialchars(json_encode($studiensemester)); ?>"
 			:aktstsem="<?= htmlspecialchars(json_encode($aktstsem)); ?>"
 			:readonly="<?= htmlspecialchars(json_encode($readOnly)); ?>"

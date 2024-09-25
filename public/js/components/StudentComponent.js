@@ -344,7 +344,7 @@ export default {
 								:label="$p.t('international', 'massnahmen')"
 							>
 								<option value="null" disabled selected>{{$p.t('international', 'massnahmen')}}</option> 
-								<option v-for="massnahme in massnahmen" :value="massnahme">{{ massnahme.bezeichnung }}</option>
+								<option v-for="massnahme in massnahmen" :value="massnahme" :title="massnahme.bezeichnung">({{massnahme.ects}} ECTs) {{ massnahme.bezeichnung }}</option>
 							</form-input>
 						</div>
 						<div class="col">

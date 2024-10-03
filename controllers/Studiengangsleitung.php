@@ -9,6 +9,8 @@ class Studiengangsleitung extends Auth_Controller
 
 	const BERECHTIGUNG_KURZBZ = 'extension/internationalReview';
 
+	const NOTE = 16;
+
 	/**
 	 * Constructor
 	 */
@@ -17,9 +19,14 @@ class Studiengangsleitung extends Auth_Controller
 		parent::__construct(array(
 				'index' => self::BERECHTIGUNG_KURZBZ .':r',
 				'setStatus' => self::BERECHTIGUNG_KURZBZ .':r',
+				'setNote' => self::BERECHTIGUNG_KURZBZ .':r',
 				'download' => self::BERECHTIGUNG_KURZBZ.':r',
-				'getAktStudiensemester' => self::BERECHTIGUNG_KURZBZ.':r',
-				'getStudents' => self::BERECHTIGUNG_KURZBZ.':r'
+				'getStudents' => self::BERECHTIGUNG_KURZBZ.':r',
+				'getLVs' => self::BERECHTIGUNG_KURZBZ.':r',
+				'load' => self::BERECHTIGUNG_KURZBZ.':r',
+				'benoten' => self::BERECHTIGUNG_KURZBZ.':r',
+				'loadBenotungen' => self::BERECHTIGUNG_KURZBZ.':r',
+				'getOrgForms' => self::BERECHTIGUNG_KURZBZ.':r',
 			)
 		);
 
@@ -44,6 +51,11 @@ class Studiengangsleitung extends Auth_Controller
 		$this->_ci->load->model('extensions/FHC-Core-International/Internatmassnahmestatus_model', 'InternatmassnahmestatusModel');
 
 		$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
+		$this->_ci->load->model('organisation/Studiengang_model', 'StudiengangModel');
+		$this->_ci->load->model('organisation/Studienplan_model', 'StudienplanModel');
+		$this->_ci->load->model('education/Lehrveranstaltung_model', 'LehrveranstaltungModel');
+		$this->_ci->load->model('education/Lvgesamtnote_model', 'LvgesamtnoteModel');
+		$this->_ci->load->model('codex/Orgform_model', 'OrgformModel');
 
 		$this->setControllerId(); // sets the controller id
 		$this->_setAuthUID();
@@ -51,24 +63,153 @@ class Studiengangsleitung extends Auth_Controller
 
 	public function index()
 	{
-		$oeKurzbz = $this->_getOes();
+		$readOnly = !$this->_ci->permissionlib->isBerechtigt(self::BERECHTIGUNG_KURZBZ, 'suid');
+
+		$stgBerechtigung = $this->_ci->permissionlib->getSTG_isEntitledFor(self::BERECHTIGUNG_KURZBZ);
+
+		$this->_ci->StudiengangModel->addOrder('kurzbzlang');
+		$this->_ci->StudiengangModel->addSelect('studiengang_kz, kurzbzlang');
+		$where = 'studiengang_kz IN (\'' . implode('\',\'', $stgBerechtigung) . '\')';
+		$studiengaenge = $this->_ci->StudiengangModel->loadWhere($where);
+
+		$aktStsem = $this->_ci->StudiensemesterModel->getAkt();
+
+		$this->_ci->StudiensemesterModel->addOrder('start', 'DESC');
+		$studiensemester = $this->_ci->StudiensemesterModel->load();
+
 
 		$data = [
-			'oeKurz' => implode('\',\'', $oeKurzbz)
+			'studiengaenge' => getData($studiengaenge),
+			'studiensemester' => getData($studiensemester),
+			'readOnly' => $readOnly,
+			'aktstsem' => getData($aktStsem)[0]->studiensemester_kurzbz
 		];
 
 		$this->_ci->load->view('extensions/FHC-Core-International/studiengangsleitung/studiengangsleitung.php', $data);
 	}
+	public function load()
+	{
+		$studiengang = $this->_ci->input->get('stg');
+
+		if (isEmptyString($studiengang))
+			return $this->outputJsonSuccess('');
+
+		$stgBerechtigung = $this->_ci->permissionlib->getSTG_isEntitledFor(self::BERECHTIGUNG_KURZBZ);
+
+		if (!in_array($studiengang, $stgBerechtigung))
+			$this->terminateWithJsonError($this->_ci->p->t('ui', 'keineBerechtigung'));
+
+		$aktStsem = $this->_ci->StudiensemesterModel->getAkt();
+		$this->outputJsonSuccess($this->_ci->InternatmassnahmezuordnungModel->getDataStudiengangsleitung(array($studiengang)));
+	}
+
+	public function loadBenotungen()
+	{
+		$studiengang = $this->_ci->input->get('stg');
+		$studiensemester = $this->_ci->input->get('stsem');
+		if (isEmptyString($studiengang) || isEmptyString($studiensemester))
+			return $this->outputJsonSuccess('');
+
+		$stgBerechtigung = $this->_ci->permissionlib->getSTG_isEntitledFor(self::BERECHTIGUNG_KURZBZ);
+
+		if (!in_array($studiengang, $stgBerechtigung))
+			$this->terminateWithJsonError($this->_ci->p->t('ui', 'keineBerechtigung'));
+
+		$this->outputJson($this->_ci->InternatmassnahmezuordnungModel->getDataStudiengangsleitungBenotung($studiengang, $studiensemester));
+	}
+
+	public function getLVs()
+	{
+		$studiengang = $this->_ci->input->get('stg');
+		$studiensemester = $this->_ci->input->get('stsem');
+		if (isEmptyString($studiengang) || isEmptyString($studiensemester))
+			return $this->outputJsonSuccess('');
+
+		$stgBerechtigung = $this->_ci->permissionlib->getSTG_isEntitledFor(self::BERECHTIGUNG_KURZBZ);
+
+		if (!in_array($studiengang, $stgBerechtigung))
+			$this->terminateWithJsonError($this->_ci->p->t('ui', 'keineBerechtigung'));
+
+		$this->_ci->LehrveranstaltungModel->addSelect('bezeichnung, lehrveranstaltung_id, studiengang_kz, orgform_kurzbz');
+		$lvs = $this->_ci->LehrveranstaltungModel->loadWhere(
+			"zeugnis AND studiengang_kz = " . $studiengang ."
+			AND semester = (SELECT max_semester
+							FROM tbl_studiengang
+							WHERE tbl_studiengang.studiengang_kz = tbl_lehrveranstaltung.studiengang_kz)
+		");
+
+		$this->outputJsonSuccess(hasData($lvs) ? getData($lvs) : []);
+	}
+
+	public function getOrgForms()
+	{
+		$studiengang = $this->_ci->input->get('stg');
+		$studiensemester = $this->_ci->input->get('stsem');
+		if (isEmptyString($studiengang) || isEmptyString($studiensemester))
+			return $this->outputJsonSuccess('');
+
+		$stgBerechtigung = $this->_ci->permissionlib->getSTG_isEntitledFor(self::BERECHTIGUNG_KURZBZ);
+
+		if (!in_array($studiengang, $stgBerechtigung))
+			$this->terminateWithJsonError($this->_ci->p->t('ui', 'keineBerechtigung'));
+
+		$this->_ci->StudienplanModel->addSelect('DISTINCT(tbl_studienplan.orgform_kurzbz)');
+		$this->_ci->StudienplanModel->addJoin('lehre.tbl_studienordnung', 'studienordnung_id');
+		$this->_ci->StudienplanModel->addJoin('lehre.tbl_studienplan_semester', 'studienplan_id');
+		$this->_ci->StudienplanModel->addJoin('public.tbl_studiengang', 'tbl_studienordnung.studiengang_kz = tbl_studiengang.studiengang_kz');
+		$this->_ci->StudienplanModel->addOrder('tbl_studienplan.orgform_kurzbz');
+		$orgformen = $this->_ci->StudienplanModel->loadWhere(
+			"tbl_studiengang.studiengang_kz = " . $studiengang ."
+			AND studiensemester_kurzbz = '" . $studiensemester ."'
+		");
+
+		$this->outputJsonSuccess(hasData($orgformen) ? getData($orgformen) : []);
+	}
+
+	private function _setStatusMulti($data)
+	{
+		$language = getUserLanguage() == 'German' ? 0 : 1;
+		$status_bezeichnung = '';
+		$statusKurz = '';
+
+		foreach ($data as $massnahme)
+		{
+			if (isset($massnahme->massnahme_id) && isset($massnahme->status))
+			{
+				$massnahmeZuordnung = $this->_checkMassnahmenZuordnung($massnahme->massnahme_id);
+
+				$status = $this->checkStatus($massnahmeZuordnung->massnahme_status_kurzbz, $massnahme->status);
+				$statusKurz = $status->massnahme_status_kurzbz;
+				$status_bezeichnung = $status->bezeichnung_mehrsprachig[$language];
+
+				$insertStatus = $this->_ci->InternatmassnahmezuordnungstatusModel->insert(
+					array(
+						'massnahme_zuordnung_id' => $massnahmeZuordnung->massnahme_zuordnung_id,
+						'datum' => date ('Y-m-d'),
+						'massnahme_status_kurzbz' => $statusKurz,
+						'insertamum' => date('Y-m-d H:i:s'),
+						'insertvon' => $this->_uid
+					)
+				);
+				if (isError($insertStatus))
+					$this->terminateWithJsonError(getError($insertStatus));
+
+				$this->sendMail($massnahmeZuordnung->massnahme_zuordnung_id);
+			}
+		}
+		$this->outputJsonSuccess(array('status_bezeichnung' => $status_bezeichnung, 'statusKurz' => $statusKurz));
+	}
 
 	public function setStatus()
 	{
-		//Die Berechtigung wird hier nochmals abgeprüft, damit man, wenn man nur Lesezugriff hat, kein "Generic Error" zurückbekommt
-		if (!$this->_ci->permissionlib->isBerechtigt(self::BERECHTIGUNG_KURZBZ, 'suid'))
-			$this->terminateWithJsonError($this->_ci->p->t('ui', 'keineBerechtigung'));
+		$postJson = $this->getPostJSON();
 
-		$massnahmeZuordnungPost = $this->_ci->input->post('massnahme_id');
-		$statusPost = $this->_ci->input->post('status');
-		$absagePost = $this->_ci->input->post('absagegrund');
+		if (is_array($postJson))
+			return $this->_setStatusMulti($postJson);
+
+		$massnahmeZuordnungPost = $postJson->massnahme_id;
+		$statusPost = $postJson->status;
+		$absagePost = isset($postJson->absageGrund) ? $postJson->absageGrund : '';
 
 		if (isEmptyString($massnahmeZuordnungPost))
 			$this->terminateWithJsonError($this->_ci->p->t('ui', 'errorFelderFehlen'));
@@ -116,6 +257,86 @@ class Studiengangsleitung extends Auth_Controller
 		$this->outputJsonSuccess(array('massnahme' => $massnahmeZuordnung->massnahme_zuordnung_id, 'status' => $statusKurz, 'dms_id' => $massnahmeZuordnung->dms_id, 'status_bezeichnung' => $status->bezeichnung_mehrsprachig[$language], 'anmerkung_stgl' => $absagePost));
 	}
 
+	public function setNote()
+	{
+		$stgBerechtigung = $this->_ci->permissionlib->getSTG_isEntitledFor(self::BERECHTIGUNG_KURZBZ);
+		$postJson = $this->getPostJSON();
+
+		$studiengang = $postJson[0]->stg;
+		if (!in_array($studiengang, $stgBerechtigung))
+			$this->terminateWithJsonError("Error");
+
+		$lv = $this->_ci->LehrveranstaltungModel->loadWhere(array('lehrveranstaltung_id' => $postJson[0]->lv));
+
+		if (isError($lv) || !hasData($lv))
+			$this->terminateWithJsonError("Error");
+		$lv = getData($lv)[0];
+
+		$studiensemester = $this->_ci->StudiensemesterModel->loadWhere(array('studiensemester_kurzbz' => $postJson[0]->stsem));
+
+		if (isError($studiensemester) || !hasData($studiensemester))
+			$this->terminateWithJsonError("Error");
+
+		$count = 0;
+		$students = [];
+		foreach ($postJson as $person)
+		{
+			$hasBenotung = $this->_ci->LvgesamtnoteModel->load(array(
+				'student_uid' => $person->student_uid,
+				'studiensemester_kurzbz' => getData($studiensemester)[0]->studiensemester_kurzbz,
+				'lehrveranstaltung_id' => $person->lv
+			));
+
+			if (!hasData($hasBenotung))
+			{
+				$insertResult = $this->_ci->LvgesamtnoteModel->insert(
+					array(
+						"lehrveranstaltung_id" => $person->lv,
+						"studiensemester_kurzbz" => getData($studiensemester)[0]->studiensemester_kurzbz,
+						"student_uid" => $person->student_uid,
+						"note" => self::NOTE,
+						"mitarbeiter_uid" => $this->_uid,
+						"benotungsdatum" =>  date('Y-m-d H:i:s'),
+						"insertamum" =>  date('Y-m-d H:i:s'),
+						"insertvon" => $this->_uid,
+						"freigabedatum" => date('Y-m-d H:i:s'),
+						"freigabevon_uid" => $this->_uid
+					)
+				);
+				if (isSuccess($insertResult))
+				{
+					$count++;
+					$students[] = $person->student_uid;
+				}
+			}
+		}
+		if (!isEmptyArray($students))
+		{
+			$studiengang = $this->_ci->StudiengangModel->load($studiengang);
+
+			$studiengang = getData($studiengang)[0];
+			$email = $studiengang->email;
+
+			$content = $this->_getContent($students);
+
+			$body_fields = array(
+				'lv' => $lv->bezeichnung,
+				'studiengang' => $studiengang->bezeichnung,
+				'semester' => getData($studiensemester)[0]->studiensemester_kurzbz,
+				'datentabelle' => $content,
+			);
+			$this->load->helper('hlp_sancho');
+
+			sendSanchoMail(
+				'InternationalNote',
+				$body_fields,
+				$email,
+				'International Skills: Noten'
+			);
+		}
+		$this->outputJsonSuccess($count);
+	}
+
 	public function download()
 	{
 		$massnahmeZuordnungPost = $this->_ci->input->get('massnahme');
@@ -135,23 +356,23 @@ class Studiengangsleitung extends Auth_Controller
 		}
 	}
 
-	public function getAktStudiensemester()
-	{
-		$studiensemester = getData($this->_ci->StudiensemesterModel->getLastOrAktSemester())[0]->studiensemester_kurzbz;
-
-		$this->outputJsonSuccess($studiensemester);
-	}
-
 	public function getStudents()
 	{
 		$status = $this->_ci->input->get('status');
 		$ects = $this->_ci->input->get('ects');
 		$more = $this->_ci->input->get('more') === 'true';
 		$exists = $this->_ci->input->get('exists') === 'true';
+		$stg = $this->_ci->input->get('stg');
 
-		$oeKurzbz = $this->_getOes();
+		$stgBerechtigung = $this->_ci->permissionlib->getSTG_isEntitledFor(self::BERECHTIGUNG_KURZBZ);
+		if (in_array($stg, $stgBerechtigung))
+		{
+			$stgStudents = explode(',', $stg);
+		}
+		else if (isEmptyString($stg))
+			$stgStudents = $stgBerechtigung;
 
-		$result = $this->_ci->InternatmassnahmezuordnungModel->getStudentUIDs($oeKurzbz);
+		$result = $this->_ci->InternatmassnahmezuordnungModel->getStudentUIDs($stgStudents);
 
 		$result = getData($result);
 
@@ -161,12 +382,17 @@ class Studiengangsleitung extends Auth_Controller
 			if (!array_search($res->massnahme_status_kurzbz, $status))
 			{
 				if ($more && !$exists)
+				{
 					$students[$res->student_uid] = $ects;
+				}
 				else if (!$more && !$exists)
+				{
 					$students[$res->student_uid] = 1;
+				}
 			}
-			if (in_array($res->massnahme_status_kurzbz, $status))
+			if (in_array($res->massnahme_status_kurzbz, $status) || (is_null($res->massnahme_status_kurzbz) && !$more))
 			{
+
 				if (!isset($students[$res->student_uid]))
 					$students[$res->student_uid] = (int)$res->sum;
 				else
@@ -239,10 +465,10 @@ class Studiengangsleitung extends Auth_Controller
 
 	private function _checkMassnahmenZuordnung($massnahmeZuordnungPost)
 	{
-		$oeKurzbz = $this->_getOes();
+		$stgBerechtigung = $this->_ci->permissionlib->getSTG_isEntitledFor(self::BERECHTIGUNG_KURZBZ);
 
-		$massnahmeZuordnung = $this->_ci->InternatmassnahmezuordnungModel->getMassnahmeStudiengangsleitung($massnahmeZuordnungPost, $oeKurzbz);
-
+		$massnahmeZuordnung = $this->_ci->InternatmassnahmezuordnungModel->getMassnahmeStudiengangsleitung($massnahmeZuordnungPost, $stgBerechtigung);
+		
 		if (isError($massnahmeZuordnung))
 			$this->terminateWithJsonError(getError($massnahmeZuordnung));
 
@@ -295,5 +521,25 @@ class Studiengangsleitung extends Auth_Controller
 		$this->_uid = getAuthUID();
 
 		if (!$this->_uid) show_error('User authentification failed');
+	}
+
+	private function _getContent($students)
+	{
+		$html = '<table border="1"><tbody>';
+
+		$html .= '<tr>
+					<th>UID</th>
+				</tr>';
+
+		foreach ($students as $student)
+		{
+			$html .= '<tr>
+						<td>'. $student .'</td>
+					</tr>';
+		}
+
+		$html .= '</tbody></table>';
+
+		return $html;
 	}
 }

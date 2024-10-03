@@ -20,7 +20,7 @@ class Student extends Auth_Controller
 				'studentDeleteMassnahme' => self::BERECHTIGUNG_KURZBZ .':rw',
 				'studentAddNachweis' => self::BERECHTIGUNG_KURZBZ .':rw',
 				'studentDownloadNachweis' => self::BERECHTIGUNG_KURZBZ .':rw',
-				'getMassnahmen' => self::BERECHTIGUNG_KURZBZ .':rw'
+				'getData' => self::BERECHTIGUNG_KURZBZ .':rw',
 			)
 		);
 
@@ -42,6 +42,7 @@ class Student extends Auth_Controller
 		$this->_ci->load->model('extensions/FHC-Core-International/Internatmassnahmezuordnungstatus_model', 'InternatmassnahmezuordnungstatusModel');
 		$this->_ci->load->model('crm/Student_model', 'StudentModel');
 		$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
+		$this->_ci->load->model('system/Sprache_model', 'SpracheModel');
 
 		$this->load->helper('form');
 
@@ -125,13 +126,22 @@ class Student extends Auth_Controller
 		);
 	}
 
+	public function getData()
+	{
+		$this->_ci->SpracheModel->addSelect('index');
+		$result = $this->_ci->SpracheModel->loadWhere(array('sprache' => getUserLanguage()));
+
+		$language =  hasData($result) ? getData($result)[0]->index : 1;
+		$this->outputJsonSuccess($this->_ci->InternatmassnahmezuordnungModel->getDataStudent($this->_uid, $language));
+	}
 	public function studentAddMassnahme()
 	{
-		$massnahmePost = $this->_ci->input->post('massnahme');
-		$studiensemesterPost = $this->_ci->input->post('studiensemester');
-		$anmerkungPost = $this->_ci->input->post('anmerkung');
-
-		if (isEmptyString($massnahmePost) || isEmptyString($studiensemesterPost))
+		$postJson = $this->getPostJSON();
+		$massnahmePost = isset($postJson->massnahme->massnahme_id) ? $postJson->massnahme->massnahme_id : '';
+		$studiensemesterPost = $postJson->studiensemester;
+		$anmerkungPost = $postJson->anmerkung;
+		
+		if (isEmptyString((string)$massnahmePost) || isEmptyString($studiensemesterPost))
 			$this->terminateWithJsonError($this->_ci->p->t('ui', 'errorFelderFehlen'));
 
 		$this->_ci->StudentModel->addJoin('public.tbl_studiengang', 'studiengang_kz');
@@ -203,7 +213,8 @@ class Student extends Auth_Controller
 
 	public function studentDeleteNachweis()
 	{
-		$massnahmenZuordnungPost = $this->_ci->input->post('massnahmenZuordnung');
+		$postJson = $this->getPostJSON();
+		$massnahmenZuordnungPost = $postJson->massnahmenZuordnung;
 
 		if (isEmptyString($massnahmenZuordnungPost))
 			$this->terminateWithJsonError($this->_ci->p->t('ui', 'errorFelderFehlen'));
@@ -252,8 +263,9 @@ class Student extends Auth_Controller
 
 	public function studentDeleteMassnahme()
 	{
-		$massnahmenZuordnungPost = $this->_ci->input->post('massnahmenZuordnung');
-
+		$postJson = $this->getPostJSON();
+		$massnahmenZuordnungPost = $postJson->massnahmenZuordnung;
+		
 		if (isEmptyString($massnahmenZuordnungPost))
 			$this->terminateWithJsonError($this->_ci->p->t('ui', 'errorFelderFehlen'));
 
@@ -292,6 +304,7 @@ class Student extends Auth_Controller
 
 		if (empty($_FILES['file']['name']) || isEmptyString($massnahmenZuordnungPost))
 			$this->terminateWithJsonError($this->_ci->p->t('ui', 'errorFelderFehlen'));
+
 
 		$massnahme = $this->_checkMassnahmenZuordnung($massnahmenZuordnungPost);
 

@@ -1,9 +1,9 @@
-import fhc_anwesenheitenapifactory from "../api/fhc-anwesenheitenapifactory.js";
+import fhcapifactory from "../api/fhcapifactory.js";
 import Massnahmen from "../components/MassnahmenComponent.js";
 import Phrasen from '../../../../js/plugin/Phrasen.js';
 import FhcAlert from '../../../../js/plugin/FhcAlert.js';
 
-Vue.$fhcapi = fhc_anwesenheitenapifactory;
+Vue.$fhcapi = fhcapifactory;
 const massnahmenApp = Vue.createApp({
 	components: {
 		Massnahmen,

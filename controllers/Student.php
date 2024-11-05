@@ -83,7 +83,9 @@ class Student extends Auth_Controller
 		$massnahmen = getData($massnahmen);
 
 		$this->_ci->StudentModel->addLimit(1);
-		$this->_ci->StudentModel->addOrder('ausbildungssemester', 'DESC');
+		$this->_ci->StudentModel->addOrder('public.tbl_prestudentstatus.datum', 'DESC');
+		$this->_ci->StudentModel->addOrder('public.tbl_prestudentstatus.insertamum', 'DESC');
+		$this->_ci->StudentModel->addOrder('public.tbl_prestudentstatus.ext_id', 'DESC');
 		$this->_ci->StudentModel->addSelect('ausbildungssemester');
 		$this->_ci->StudentModel->addJoin('public.tbl_prestudentstatus', 'prestudent_id');
 		$ausbildungssemester = $this->_ci->StudentModel->loadWhere(array(

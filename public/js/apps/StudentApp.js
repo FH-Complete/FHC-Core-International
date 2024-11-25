@@ -3,7 +3,7 @@ import Student from "../components/StudentComponent.js";
 import Phrasen from '../../../../js/plugin/Phrasen.js';
 import FhcAlert from '../../../../js/plugin/FhcAlert.js';
 
-Vue.$fhcapi = fhcapifactory;
+Vue.$fhcapi = (Vue?.$fhcapi === undefined) ? fhcapifactory : {...Vue.$fhcapi, ...fhcapifactory};
 
 const studentApp = Vue.createApp({
 	components: {

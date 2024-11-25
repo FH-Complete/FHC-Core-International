@@ -19,7 +19,7 @@ $includesArray = array(
     ),
 );
 
-if(defined("CIS4"))
+if(defined("CIS4") && CIS4)
 {
 	$this->load->view(
 		'templates/CISVUE-Header',
@@ -43,7 +43,7 @@ else
 </div>
 
 <?php
-if (defined("CIS4")) {
+if (defined("CIS4") && CIS4) {
 	$this->load->view(
 		'templates/CISVUE-Footer',
 		$includesArray

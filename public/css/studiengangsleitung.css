@@ -5,3 +5,32 @@
 a {
     text-decoration: none;
 }
+
+.red {
+    background-color: red;
+}
+.greenyellow {
+    background-color: greenyellow;
+}
+.yellow {
+    background-color: yellow;
+}
+.orange {
+    background-color: orange;
+}
+.green {
+    background-color: green;
+}
+.box {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    vertical-align: sub;
+}
+
+.statustable {
+    margin-bottom: 0;
+}
+.statuscard {
+    border-bottom: none;
+}

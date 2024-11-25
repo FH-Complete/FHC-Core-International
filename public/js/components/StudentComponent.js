@@ -68,10 +68,6 @@ export default {
 					["planned", "accepted", "performed", "confirmed", "declined"],
 				],
 				groupClosedShowCalcs:true,
-				selectableCheck: function(row)
-				{
-					return row.getData().massnahme_status_kurzbz === 'planned';
-				},
 				groupHeader: (value, count, data, group)=>
 				{
 					switch (value)
@@ -89,20 +85,22 @@ export default {
 					}
 				},
 				columns: [
-					{title: this.$p.t('international', 'meinMassnahmeplan'), field: 'bezeichnung'},
+					{title: this.$p.t('international', 'meinMassnahmeplan'), headerSort: false, field: 'bezeichnung'},
 					{
 						title: this.$p.t('lehre', 'ects'),
 						field: 'ects',
 						align: "right",
 						bottomCalc:"sum",
+						headerSort: false,
 						bottomCalcParams:{precision:2}
 					},
-					{title: this.$p.t('international', 'studiensemesterGeplant'), field: 'studiensemester_kurzbz'},
-					{title: this.$p.t('global', 'anmerkung'), field: 'anmerkung'},
-					{title: this.$p.t('international', 'anmerkungstgl'), field: 'anmerkung_stgl'},
+					{title: this.$p.t('international', 'studiensemesterGeplant'), headerSort: false, field: 'studiensemester_kurzbz'},
+					{title: this.$p.t('global', 'anmerkung'), field: 'anmerkung', headerSort: false},
+					{title: this.$p.t('international', 'anmerkungstgl'), field: 'anmerkung_stgl', headerSort: false},
 					{
 						title: this.$p.t('global', 'dokumentePDF'),
 						field: 'dms_id',
+						headerSort: false,
 						formatter: (cell, formatterParams, onRendered) =>
 						{
 							const div = document.createElement('div');
@@ -170,6 +168,7 @@ export default {
 					{
 						title: this.$p.t('international', 'massnahmeLoeschen'),
 						field: 'massnahmen_status',
+						headerSort: false,
 						formatter: (cell, formatterParams, onRendered) =>
 						{
 							var status = cell.getData().massnahme_status_kurzbz;
@@ -185,6 +184,7 @@ export default {
 						}
 					},
 				],
+				persistenceID: "02.10.2024",
 			}
 		},
 
@@ -244,7 +244,7 @@ export default {
 							'dms_id' : null,
 							'massnahme_status_kurzbz': 'accepted'
 						},
-					).then(() => this.$refs.massnahmenStudentTable.tabulator.setGroupBy('massnahme_status_kurzbz'));;
+					).then(() => this.$refs.massnahmenStudentTable.tabulator.setGroupBy('massnahme_status_kurzbz'));
 				}
 			});
 		},
@@ -275,7 +275,7 @@ export default {
 						massnahme_id: data.massnahme_id,
 						status: 'planned',
 						anmerkung: data.anmerkung
-					}, true);
+					});
 
 					this.reset();
 					this.$refs.addMassnahmeModel.hide();

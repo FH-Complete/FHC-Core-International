@@ -47,9 +47,6 @@ export default {
 				this._setFilter(this.filteredUids, newVal);
 
 			this.filterLVsDropdown();
-
-			/*this.filterLVsDropdown();
-			this.openNotenUebernahme();*/
 		}
 	},
 	data: function() {
@@ -110,7 +107,7 @@ export default {
 				selectablePersistence: false,
 				initialFilter: {},
 				selectableCheck: (row) => {
-					return row.getData().massnahme_status_kurzbz === this.selectableStatus || (!row.getData().massnahme_status_kurzbz && row.getData().kontakt !== undefined);
+					return row.getData().massnahme_status_kurzbz === this.selectableStatus;
 				},
 				groupHeader: function(value, count, data, group)
 				{
@@ -139,7 +136,7 @@ export default {
 					outerDiv.style.alignItems = 'center';
 
 					let innerDiv = document.createElement('div');
-					innerDiv.style.backgroundColor = color;
+					innerDiv.classList.add(color);
 					innerDiv.style.width = '50px';
 					innerDiv.style.height = '20px';
 					innerDiv.style.marginRight = '10px';
@@ -179,13 +176,14 @@ export default {
 						title: this.$p.t('international', 'planAkzeptieren'),
 						field: 'akzeptieren',
 						headerFilter: true,
+						tooltip: false,
 						width: 150,
 						formatter: (cell, formatterParams, onRendered) =>
 						{
 							var massnahme = cell.getData().massnahme_zuordnung_id;
 							var status = cell.getData().massnahme_status_kurzbz;
 
-							if (status !== 'confirmed' && status !== 'declined' && this.readonly === false)
+							if (status !== 'confirmed' && status !== 'declined' && this.readonly === false && status !== 'performed')
 							{
 								var div = document.createElement('div');
 
@@ -201,12 +199,13 @@ export default {
 							}
 							else
 								return '-';
-						}
+						},
 					},
 					{
 						title: this.$p.t('international', 'bestaetigungAkzeptieren'),
 						field: 'massnahme_akzeptieren',
 						headerFilter: true,
+						tooltip: false,
 						width: 210,
 						formatter: (cell, formatterParams, onRendered) =>
 						{
@@ -218,7 +217,7 @@ export default {
 							{
 								let div = document.createElement('div');
 								let downloadNachweis = document.createElement('button');
-								downloadNachweis.title = this.$p.t("international", "ectsBestaetigt");
+								downloadNachweis.title = this.$p.t("international", "downloadBestaetigung");
 								downloadNachweis.className = 'btn';
 								downloadNachweis.innerHTML = "<i class='fa fa-download fa-1x' aria-hidden = 'true' ></i >";
 								downloadNachweis.addEventListener('click', () => window.location.href = CoreRESTClient._generateRouterURI('extensions/FHC-Core-International/Studiengangsleitung/download?massnahme=' + massnahme));
@@ -247,7 +246,11 @@ export default {
 						title: this.$p.t('international', 'ectsMassnahme'),
 						field: 'ects',
 						headerFilter: true,
+						tooltip: false,
 						width: 200,
+						bottomCalcFormatter: (cell, calcValue) => {
+							return this.$p.t('international', 'ectsBestaetigt') + " " + cell.getValue() + ".00";
+						},
 						bottomCalc: (values, data, calcParams) =>
 						{
 							var sum = 0;
@@ -259,7 +262,7 @@ export default {
 									sum += parseInt(value.ects);
 								}
 							});
-							return this.$p.t('international', 'ectsBestaetigt') + " " + sum + ".00"
+							return sum;
 						}
 					},
 					{title: this.$p.t('lehre', 'studiensemester'), field: 'student_studiensemester', headerFilter: true},
@@ -267,6 +270,7 @@ export default {
 						title: this.$p.t('global', 'kontakt'),
 						field: 'kontakt',
 						headerFilter: true,
+						tooltip: false,
 						width: 100,
 						formatter: (cell, formatterParams, onRendered) =>
 						{
@@ -274,6 +278,7 @@ export default {
 						}
 					},
 				],
+				persistenceID: "02.10.2024",
 			}
 		},
 		getSem: {
@@ -308,8 +313,9 @@ export default {
 				'absage' : absage
 			}
 
-			button.addEventListener('click', () =>
+			button.addEventListener('click', (e) =>
 			{
+				e.stopPropagation();
 				if (absage)
 					{
 						this.formData.massnahme_id = massnahme;
@@ -365,17 +371,45 @@ export default {
 			this.setStatusMulti(data, rows);
 		},
 		sendMail() {
+			const allData = this.$refs.massnahmenTable.tabulator.getRows("active");
 
-			const selectedRows = this.$refs.massnahmenTable.tabulator.getSelectedRows();
-			let emails = []
-			selectedRows.forEach(row => {
+			const studentMap = new Map();
+
+			allData.forEach(row => {
 				let rowData = row.getData()
+				const uid = rowData.student_uid;
+				if (!studentMap.has(uid)) {
+					studentMap.set(uid, []);
+				}
+				studentMap.get(uid).push(rowData.massnahme_status_kurzbz);
+			});
 
+			let emails = [];
 
-				if (!emails.includes(rowData.student_uid))
-					emails.push(rowData.student_uid + "@technikum-wien.at")
-			})
-			window.location.href = `mailto:?bcc=${emails}`;
+			studentMap.forEach((statusList, uid) => {
+				const hasPlannedMeasures = statusList.some(status =>
+					status === 'planned' ||
+					status === 'accepted' ||
+					status === 'confirmed' ||
+					status === 'performed'
+				);
+
+				if (!hasPlannedMeasures)
+				{
+					emails.push(`${uid}@technikum-wien.at`);
+				}
+			});
+			if (emails.length > 0)
+			{
+				if (emails.length > 50)
+					this.$fhcAlert.alertWarning(this.$p.t('international', 'mailMeldungzuviele'));
+				else
+					window.location.href = `mailto:?bcc=${encodeURIComponent(emails)}`;
+			}
+			else
+			{
+				this.$fhcAlert.alertSuccess(this.$p.t('international', 'mailMeldung'));
+			}
 		},
 		setStatusMulti (data, rows)
 		{
@@ -393,7 +427,7 @@ export default {
 							}
 						)
 					});
-
+					this.$refs.massnahmenTable.tabulator.rowManager.refreshActiveData();
 					this.$refs.massnahmenTable.tabulator.deselectRow();
 					this.$fhcAlert.alertSuccess("Erfolgreich gesetzt");
 				}
@@ -416,10 +450,11 @@ export default {
 							'anmerkung_stgl' : data.anmerkung_stgl
 						},
 					).then(() => {
-						this.$refs.massnahmenTable.tabulator.scrollToRow(data.massnahme, 'top', true);
+						this.$refs.massnahmenTable.tabulator.rowManager.refreshActiveData();
+						this.$refs.absageModal.hide()
+						this.$refs.massnahmenTable.tabulator.deselectRow()
+						this.$refs.massnahmenTable.tabulator.scrollToRow(data.massnahme, "center", false);
 					});
-					this.$refs.absageModal.hide()
-					this.$refs.massnahmenTable.tabulator.deselectRow()
 				}
 			});
 		},
@@ -721,18 +756,87 @@ export default {
 		},
 		collapseOpenGroup()
 		{
-			console.log("test");
 			this.$refs.massnahmenTable.tabulator.setGroupStartOpen(false);
-			/*this.$refs.massnahmenTable.tabulator.getGroups().forEach(group => {console.log(group.collapse())})
-			this.$refs.massnahmenTable.tabulator.getGroups().forEach(group => group.collapse());*/
-		}
+		},
 	},
 
 	template: `
-	<core-base-layout
-		:title="$p.t('international', 'massnahmen')">
+	<core-base-layout>
+		
 		<template #main>
+			<h3 class="h4">{{ $p.t('international', 'massnahmen') }}</h3>
 			<div class="row">
+				<div class="col-lg-12">
+					<a class="float-end" data-bs-toggle="collapse" data-bs-target="#legende" aria-expanded="true" aria-controls="collapse1">
+						{{ $p.t('ui', 'hilfeZuDieserSeite') }}
+					</a>
+				</div>
+			</div>
+			<div class="row accordion-collapse collapse" id="legende">
+				<div class="col-lg-12">
+					<section class="border p-3">
+						<div class="row">
+							<div class="col-6 highlight">
+								<div class="card">
+									<div class="card-header">
+										Ampelsystem
+									</div>
+									<ul class="list-group list-group-flush">
+										<li class="list-group-item">
+											<span class="red box"></span> - {{ $p.t('international', 'ampelRed') }}
+										</li>
+										<li class="list-group-item">
+											<span class="yellow box"></span> - {{ $p.t('international', 'ampelYellow') }}
+										</li>
+										<li class="list-group-item">
+											<span class="orange box"></span> - {{ $p.t('international', 'ampelOrange') }}
+										</li>
+										<li class="list-group-item">
+											<span class="greenyellow box"></span> - {{ $p.t('international', 'ampelGreenyellow') }}
+										</li>
+										<li class="list-group-item">
+											<span class="green box"></span> - {{ $p.t('international', 'ampelGreen') }}
+										</li>
+									</ul>
+								</div>
+							</div>
+							<div class="col-6 highlight">
+								<div class="card statuscard">
+									<div class="card-header">
+										Status
+									</div>
+									<table class="table table-sm p-3 statustable">
+										<tbody>
+											<tr>
+												<td class="ps-2">{{ $p.t('international', 'statusGeplant') }}</td>
+												<td class="ps-2">{{ $p.t('international', 'statusGeplantDesc') }}</td>
+											</tr>
+											<tr>
+												<td class="ps-2">{{ $p.t('international', 'statusAkzeptiert') }}</td>
+												<td class="ps-2">{{ $p.t('international', 'statusAkzeptiertDesc') }}</td>
+											</tr>
+											<tr>
+												<td class="ps-2">{{ $p.t('international', 'statusDurchgefuehrt') }}</td>
+												<td class="ps-2">{{ $p.t('international', 'statusDurchgefuehrtDesc') }}</td>
+											</tr>
+											<tr>
+												<td class="ps-2">{{ $p.t('international', 'statusBestaetigt') }}</td>
+												<td class="ps-2">{{ $p.t('international', 'statusBestaetigtDesc') }}</td>
+											</tr>
+											<tr>
+												<td class="ps-2">{{ $p.t('international', 'statusAbgelehnt') }}</td>
+												<td class="ps-2">{{ $p.t('international', 'statusAbgelehntDesc') }}</td>
+											</tr>
+										</tbody>
+									</table>
+								</div>
+							</div>
+						</div>
+					</section>
+				</div>
+			</div>
+
+			<div class="row mt-4">
 				<div class="col-md-2">
 					<select v-model="selectedStg" class="form-select">
 						<option value="">{{ $p.t('lehre', 'studiengang') }}</option>
@@ -804,12 +908,11 @@ export default {
 			
 			<br />
 			<div class="row">
-
 				<div class="col-md-6 d-flex gap-2">
 					<button @click="collapseGroup" class="btn btn-outline-secondary" type="button"><i id="togglegroup" class="fa-solid fa-minimize"></i></button>
 					<button @click="selectAll" class="btn btn-outline-secondary" type="button"> {{ $p.t('international', 'alleGeplantenMarkieren') }} </button>
 					<button @click="acceptAll" class="btn btn-outline-secondary" type="button"> {{ $p.t('international', 'alleAkzeptierenPlan') }} </button>
-					<button @click="sendMail" class="btn btn-outline-secondary" type="button"> {{ $p.t('international', 'mailversenden') }} </button>
+					<button @click="sendMail" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'mailButton')"> {{ $p.t('international', 'mailversenden') }} </button>
 				</div>
 			</div>
 			<br />

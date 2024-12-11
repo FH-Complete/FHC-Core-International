@@ -108,16 +108,17 @@ export default {
 							const documentId = cell.getData().dms_id;
 							const status = cell.getData().massnahme_status_kurzbz;
 
-							if (documentId === null && status === 'accepted') {
+							if (documentId === null && status === 'accepted')
+							{
 								const label = document.createElement('label');
-								label.htmlFor = 'fileNachweis_' . massnahme;
+								label.htmlFor = 'fileNachweis_' + massnahme;
 								label.className = 'btn btn';
 								label.innerHTML = "<i class='fa fa-upload fa-1x' aria-hidden='true'></i>";
 
 								const input = document.createElement('input');
 								input.type = 'file';
 								input.name = 'uploadfile';
-								input.id = 'fileNachweis_' . massnahme;
+								input.id = 'fileNachweis_' + massnahme;
 								input.accept = '.pdf';
 								input.className = 'fileNachweis hidden';
 								input.style.display = 'none';
@@ -184,7 +185,7 @@ export default {
 						}
 					},
 				],
-				persistenceID: "02.10.2024",
+				persistenceID: "11.12.2024",
 			}
 		},
 

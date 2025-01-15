@@ -87,7 +87,7 @@ export default {
 				columns: [
 					{title: this.$p.t('international', 'meinMassnahmeplan'), headerSort: false, field: 'bezeichnung'},
 					{
-						title: this.$p.t('lehre', 'ects'),
+						title: this.$p.t('international', 'internationalCredits'),
 						field: 'ects',
 						align: "right",
 						bottomCalc:"sum",
@@ -185,7 +185,7 @@ export default {
 						}
 					},
 				],
-				persistenceID: "11.12.2024",
+				persistenceID: "14.01.2025",
 			}
 		},
 
@@ -345,7 +345,7 @@ export default {
 								:label="$p.t('international', 'massnahmen')"
 							>
 								<option value="null" disabled selected>{{$p.t('international', 'massnahmen')}}</option> 
-								<option v-for="massnahme in massnahmen" :value="massnahme" :title="massnahme.bezeichnung">({{massnahme.ects}} ECTs) {{ massnahme.bezeichnung }}</option>
+								<option v-for="massnahme in massnahmen" :value="massnahme" :title="massnahme.bezeichnung">({{massnahme.ects}} International Credits) {{ massnahme.bezeichnung }}</option>
 							</form-input>
 						</div>
 						<div class="col">

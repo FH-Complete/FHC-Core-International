@@ -58,7 +58,7 @@ export default {
 				columns: [
 					{title: 'Bezeichnung', field: 'bezeichnungshow'},
 					{title: 'Beschreibung', field: 'beschreibungshow'},
-					{title: 'ECTS', field: 'ects'},
+					{title: 'International Credits', field: 'ects'},
 					{
 						title: 'Aktiv',
 						field: 'aktiv',
@@ -227,7 +227,7 @@ export default {
 								type="number"
 								v-model="formData.ects"
 								name="ects"
-								:label="$p.t('lehre', 'ects')"
+								:label="$p.t('international', 'internationalCredits')"
 							/>
 						</div>
 					</div>

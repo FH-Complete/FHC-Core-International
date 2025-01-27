@@ -87,7 +87,7 @@ export default {
 				columns: [
 					{title: this.$p.t('international', 'meinMassnahmeplan'), headerSort: false, field: 'bezeichnung'},
 					{
-						title: this.$p.t('lehre', 'ects'),
+						title: this.$p.t('international', 'internationalCredits'),
 						field: 'ects',
 						align: "right",
 						bottomCalc:"sum",
@@ -108,16 +108,17 @@ export default {
 							const documentId = cell.getData().dms_id;
 							const status = cell.getData().massnahme_status_kurzbz;
 
-							if (documentId === null && status === 'accepted') {
+							if (documentId === null && status === 'accepted')
+							{
 								const label = document.createElement('label');
-								label.htmlFor = 'fileNachweis_' . massnahme;
+								label.htmlFor = 'fileNachweis_' + massnahme;
 								label.className = 'btn btn';
 								label.innerHTML = "<i class='fa fa-upload fa-1x' aria-hidden='true'></i>";
 
 								const input = document.createElement('input');
 								input.type = 'file';
 								input.name = 'uploadfile';
-								input.id = 'fileNachweis_' . massnahme;
+								input.id = 'fileNachweis_' + massnahme;
 								input.accept = '.pdf';
 								input.className = 'fileNachweis hidden';
 								input.style.display = 'none';
@@ -184,7 +185,7 @@ export default {
 						}
 					},
 				],
-				persistenceID: "02.10.2024",
+				persistenceID: "14.01.2025",
 			}
 		},
 
@@ -344,7 +345,7 @@ export default {
 								:label="$p.t('international', 'massnahmen')"
 							>
 								<option value="null" disabled selected>{{$p.t('international', 'massnahmen')}}</option> 
-								<option v-for="massnahme in massnahmen" :value="massnahme" :title="massnahme.bezeichnung">({{massnahme.ects}} ECTs) {{ massnahme.bezeichnung }}</option>
+								<option v-for="massnahme in massnahmen" :value="massnahme" :title="massnahme.bezeichnung">({{massnahme.ects}} International Credits) {{ massnahme.bezeichnung }}</option>
 							</form-input>
 						</div>
 						<div class="col">

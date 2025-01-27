@@ -109,18 +109,14 @@ class Student extends Auth_Controller
 
 		$diff = $maxsemester - $ausbildungssemester;
 
-		$studiensemester = [];
-		if ($diff !== 0)
-		{
-			$aktSemester = $this->_ci->StudiensemesterModel->getAktOrNextSemester();
-			$this->_ci->StudiensemesterModel->addLimit($diff + 1);
-			$this->_ci->StudiensemesterModel->addOrder('start');
-			$studiensemester = $this->_ci->StudiensemesterModel->loadWhere(array('start >=' => getData($aktSemester)[0]->start));
-			if (isError($studiensemester))
-				$this->terminateWithJsonError(getError($studiensemester));
+		$aktSemester = $this->_ci->StudiensemesterModel->getAktOrNextSemester();
+		$this->_ci->StudiensemesterModel->addLimit($diff + 1);
+		$this->_ci->StudiensemesterModel->addOrder('start');
+		$studiensemester = $this->_ci->StudiensemesterModel->loadWhere(array('start >=' => getData($aktSemester)[0]->start));
+		if (isError($studiensemester))
+			$this->terminateWithJsonError(getError($studiensemester));
 
-			$studiensemester = getData($studiensemester);
-		}
+		$studiensemester = getData($studiensemester);
 
 		$this->_ci->load->view('extensions/FHC-Core-International/cis/student.php',
 			array('massnahmen' => $massnahmen,

@@ -96,6 +96,7 @@ export default {
 							return [];
 					}
 				},
+				height: '65vh',
 				maxHeight: "100%",
 				layout: 'fitDataStretch',
 				selectable: true,
@@ -155,6 +156,7 @@ export default {
 					{title:  this.$p.t('person', 'uid'), field: 'student_uid', headerFilter: true, width: 150},
 					{title: this.$p.t('person', 'vorname'), field: 'vorname', headerFilter: true, width: 120},
 					{title: this.$p.t('person', 'nachname'), field: 'nachname', headerFilter: true, width: 120},
+					{title: this.$p.t('international', 'studentstatus'), field: 'status_kurzbz', headerFilter: true, width: 120},
 					{title: this.$p.t('lehre', 'note'), field: 'note',  width: 50,
 						formatter: "tickCross",
 						headerFilter: "tickCross",
@@ -485,12 +487,14 @@ export default {
 					row.select();
 				}
 			});
-
-
 		},
 		_removeOrgFilter(oldOrg)
 		{
 			this.$refs.massnahmenTable.tabulator.removeFilter("orgform", "=", oldOrg)
+		},
+		stglTodo()
+		{
+			this.$refs.massnahmenTable.tabulator.setFilter("massnahme_status_kurzbz", "in", ['planned', 'performed']);
 		},
 		plannedMore()
 		{
@@ -565,6 +569,7 @@ export default {
 		{
 			this.selectableStatus = 'planned';
 			this.$refs.massnahmenTable.tabulator.hideColumn('note');
+			this.$refs.massnahmenTable.tabulator.clearHeaderFilter();
 			this.$refs.massnahmenTable.tabulator.clearFilter();
 		},
 		openNotenUebernahme()
@@ -612,13 +617,12 @@ export default {
 		closeNotenUebernahme()
 		{
 			this.notenUebernahme = false;
-			this.deleteFilter();
 		},
 		toggleNotenUbernahme()
 		{
 			if (this.selectedStg === '')
 				return;
-
+			this.deleteFilter();
 			if (!this.notenUebernahme)
 				this.openNotenUebernahme();
 			else
@@ -742,7 +746,6 @@ export default {
 
 			if (this.$refs.massnahmenTable.tabulator.options.groupStartOpen)
 			{
-
 				document.getElementById("togglegroup").classList.remove("fa-maximize");
 				document.getElementById("togglegroup").classList.add("fa-minimize");
 			}
@@ -919,7 +922,8 @@ export default {
 			<div class="col-xs-12">
 				<div class="btn-toolbar" role="toolbar">
 					  <div class="btn-group me-2" role="group" aria-label="First group">
-						<button @click="plannedMore" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'mehrverplant')"><i class='fa-solid fa-calendar-plus's></i></button>
+						<button @click="stglTodo" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'stgtodo')"><i class='fa-solid fas fa-tasks'></i></button>
+						<button @click="plannedMore" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'mehrverplant')"><i class='fa-solid fa-calendar-plus'></i></button>
 						<button @click="plannedLess" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'wenigerverplant')"><i class='fa-solid fa-calendar-minus'></i></button>
 						<button @click="confirmedMore" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'mehrbestaetigt')"><i class='fa-solid fa-calendar-check'></i></button>
 						<button @click="confirmedLess" class="btn btn-outline-secondary" type="button" :title="$p.t('international','wenigerbestaetigt')"><i class='fa-solid fa-calendar-times'></i></button>

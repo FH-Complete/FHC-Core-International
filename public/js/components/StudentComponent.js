@@ -15,7 +15,7 @@ export default {
 			required: true
 		},
 		studiensemester : {
-			type: String,
+			type: Object,
 			required: true
 		}
 	},
@@ -43,6 +43,7 @@ export default {
 			},
 			phrasesLoaded: null,
 			sideMenuEntries: {},
+			tabulatorEventHandler: []
 		}
 	},
 	computed: {
@@ -89,7 +90,7 @@ export default {
 					{
 						title: this.$p.t('international', 'internationalCredits'),
 						field: 'ects',
-						align: "right",
+						hozAlign: "right",
 						bottomCalc:"sum",
 						headerSort: false,
 						bottomCalcParams:{precision:2}
@@ -327,7 +328,6 @@ export default {
 				:tabulator-events="tabulatorEventHandler"
 				@nw-new-entry="newSideMenuEntryHandler"
 				:table-only=true
-				:hideTopMenu=false
 				new-btn-label="Massnahme"
 				new-btn-show
 				@click:new="addMassnahmeContainer"

@@ -71,6 +71,7 @@ export default {
 			selectedOrgform: "",
 			orgformen: "",
 			filteredUids: [],
+			tabulatorEventHandler: []
 		}
 	},
 	async created() {
@@ -675,7 +676,7 @@ export default {
 					this.filteredLvs = [];
 					this.selectedLv = '';
 				}
-			});
+			}).then(() => this.filterLVsDropdown());
 		},
 		filterLVsDropdown()
 		{
@@ -883,7 +884,6 @@ export default {
 				:tabulator-events="tabulatorEventHandler"
 				@nw-new-entry="newSideMenuEntryHandler"
 				:table-only=true
-				:hideTopMenu=false
 			>
 				
 			</core-filter-cmpt>

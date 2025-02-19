@@ -306,4 +306,27 @@ class Internatmassnahmezuordnung_model extends DB_Model
 
 		return $this->execReadOnlyQuery($query, array($student));
 	}
+
+	public function enoughECTs($student)
+	{
+		$query = 'SELECT
+			1
+			FROM extension.tbl_internat_massnahme_zuordnung zuordnung 
+				JOIN extension.tbl_internat_massnahme massnahme ON zuordnung.massnahme_id = massnahme.massnahme_id
+				JOIN extension.tbl_internat_massnahme_zuordnung_status zstatus ON zuordnung.massnahme_zuordnung_id = zstatus.massnahme_zuordnung_id
+				JOIN tbl_prestudent ON zuordnung.prestudent_id = tbl_prestudent.prestudent_id
+				JOIN tbl_student ON tbl_prestudent.prestudent_id = tbl_student.prestudent_id
+			WHERE zstatus.massnahme_status_kurzbz = ?
+			  AND tbl_student.student_uid = ?
+			  AND zstatus.massnahme_zuordnung_status_id = (
+				SELECT MAX(sub_zstatus.massnahme_zuordnung_status_id)
+				FROM extension.tbl_internat_massnahme_zuordnung_status sub_zstatus
+				WHERE sub_zstatus.massnahme_zuordnung_id = zuordnung.massnahme_zuordnung_id
+			)
+			GROUP BY tbl_student.student_uid, tbl_prestudent.prestudent_id, tbl_prestudent.studiengang_kz
+			HAVING SUM(massnahme.ects) >= ?';
+
+		return $this->execReadOnlyQuery($query, array("confirmed", $student, 5));
+
+	}
 }

@@ -36,6 +36,7 @@ export default {
 	watch: {
 		selectedStg(newVal) {
 			this.updateTabulatorFilter();
+			this.closeNotenUebernahme()
 		},
 		getSem(newVal) {
 			this.openNotenUebernahme();
@@ -44,10 +45,11 @@ export default {
 			if (newVal === "")
 				this._removeOrgFilter(oldValue)
 			else
-				this._setFilter(this.filteredUids, newVal);
+				this._setNotenFilter(this.filteredUids, newVal);
 
 			this.filterLVsDropdown();
-		}
+		},
+
 	},
 	data: function() {
 		return {
@@ -71,7 +73,18 @@ export default {
 			selectedOrgform: "",
 			orgformen: "",
 			filteredUids: [],
-			tabulatorEventHandler: []
+			tabulatorEventHandler: [
+				{
+					event: "rowClick",
+					handler: (e, row) => {
+						if(row.getData().massnahme_status_kurzbz !== this.selectableStatus) {
+							e.stopPropagation();
+							row.deselect();
+						}
+					}
+				}
+			],
+			changedData: []
 		}
 	},
 	async created() {
@@ -351,7 +364,6 @@ export default {
 		updateTabulatorFilter()
 		{
 			this.$refs.massnahmenTable.tabulator.setData();
-			this.notenUebernahme = false;
 			this.deleteFilter();
 		},
 		selectAll() {
@@ -456,7 +468,6 @@ export default {
 						this.$refs.massnahmenTable.tabulator.rowManager.refreshActiveData();
 						this.$refs.absageModal.hide()
 						this.$refs.massnahmenTable.tabulator.deselectRow()
-						this.$refs.massnahmenTable.tabulator.scrollToRow(data.massnahme, "center", false);
 					});
 				}
 			});
@@ -473,7 +484,11 @@ export default {
 				}
 			});
 		},
-		_setFilter(uids, withOrgForm = false)
+		_setFilter(uids)
+		{
+			this.$refs.massnahmenTable.tabulator.setFilter("student_uid", "in", uids);
+		},
+		_setNotenFilter(uids, withOrgForm = false)
 		{
 			this.$refs.massnahmenTable.tabulator.setFilter("student_uid", "in", uids);
 
@@ -568,15 +583,15 @@ export default {
 		},
 		deleteFilter()
 		{
-			this.selectableStatus = 'planned';
-			this.$refs.massnahmenTable.tabulator.hideColumn('note');
+			this.selectableStatus = 'confirmed';
 			this.$refs.massnahmenTable.tabulator.clearHeaderFilter();
 			this.$refs.massnahmenTable.tabulator.clearFilter();
 		},
 		openNotenUebernahme()
 		{
 			this.notenUebernahme = true;
-
+			this.selectableStatus = 'confirmed';
+			this.$refs.massnahmenTable.tabulator.showColumn('note');
 			if (!this.selectedStg || !this.getSem)
 				return;
 
@@ -592,7 +607,6 @@ export default {
 		},
 		async loadBenotung(data)
 		{
-			this.selectableStatus = 'confirmed';
 			await Vue.$fhcapi.Studiengangsleitung.loadBenotung(data).then(response => {
 				if (CoreRESTClient.isSuccess(response.data))
 				{
@@ -602,14 +616,11 @@ export default {
 						this.filteredUids = responseData.map(function(obj) {
 							return obj['student_uid'];
 						});
-						this._setFilter(this.filteredUids);
-
-
-						this.$refs.massnahmenTable.tabulator.showColumn('note');
+						this._setNotenFilter(this.filteredUids);
 					}
 					else
 					{
-						this._setFilter(['']);
+						this._setNotenFilter(['']);
 						this.filteredUids = [''];
 					}
 				}
@@ -617,7 +628,9 @@ export default {
 		},
 		closeNotenUebernahme()
 		{
+			this.selectableStatus = 'planned';
 			this.notenUebernahme = false;
+			this.$refs.massnahmenTable.tabulator.hideColumn('note');
 		},
 		toggleNotenUbernahme()
 		{
@@ -696,12 +709,17 @@ export default {
 		},
 		noteSetzen ()
 		{
-
 			if (this.selectedStg === "" || this.selectedLv === "" || this.getSem === "")
 				return this.$fhcAlert.alertWarning("Studiensemester/Orgform und LV auswählen!");
+
 			let selectedData = this.$refs.massnahmenTable.tabulator.getSelectedData();
 			let changedData = []
+
 			selectedData.forEach((data,i) => {
+
+				if (!this.filteredUids.includes(data.student_uid))
+					return;
+
 				const existingStudent = changedData.find(item => item.student_uid === data.student_uid);
 
 				if (!existingStudent)
@@ -716,6 +734,9 @@ export default {
 				}
 			});
 
+			if (changedData.length === 0)
+				return this.$fhcAlert.alertWarning("Es wurde bei keiner Person eine Note eingetragen!");
+
 			this.setNote(changedData);
 		},
 		setNote(changedData){
@@ -723,20 +744,33 @@ export default {
 			Vue.$fhcapi.Studiengangsleitung.setNote(changedData).then(response => {
 				if (CoreRESTClient.isSuccess(response.data))
 				{
-					changedData.forEach(item => {
-						this.$refs.massnahmenTable.tabulator.getRows().forEach(row => {
-							const rowData = row.getData();
-							if (rowData.student_uid === item.student_uid) {
-								row.deselect();
-								row.update({
-									note: true
-								});
-							}
+
+					let responseData = (CoreRESTClient.getData(response.data));
+
+					if (responseData.count === 0)
+					{
+						this.$fhcAlert.alertWarning("Es wurde bei keiner Person eine Note eingetragen!");
+					}
+					else
+					{
+						responseData.students.forEach(item => {
+							this.$refs.massnahmenTable.tabulator.getRows().forEach(row => {
+								const rowData = row.getData();
+								if (rowData.student_uid === item) {
+									row.deselect();
+									row.update({
+										note: true
+									});
+								}
+							});
+
 						});
 
-					});
+						let person = responseData.count === 1 ? 'Person' : 'Personen';
+						this.$fhcAlert.alertSuccess(`Es wurde bei ${responseData.count} ${person} eine Note eingetragen!`);
+					}
+
 					this.$refs.loader.hide();
-					this.$fhcAlert.alertSuccess("Note erfolgreich gesetzt");
 				}
 			});
 		},
@@ -848,7 +882,7 @@ export default {
 					</select>
 				</div>
 				<div class="col-md-2">
-					<button @click="toggleNotenUbernahme" :disabled="selectedStg === ''" class="btn btn-primary">Notenübernahme <i :class="iconClass"></i></button>
+					<button v-if="!readonly" @click="toggleNotenUbernahme" :disabled="selectedStg === ''" class="btn btn-primary">Notenübernahme <i :class="iconClass"></i></button>
 				</div>
 			</div>
 			<hr />
@@ -910,30 +944,32 @@ export default {
 			</bs-modal>
 			
 			<br />
-			<div class="row">
-				<div class="col-md-6 d-flex gap-2">
-					<button @click="collapseGroup" class="btn btn-outline-secondary" type="button"><i id="togglegroup" class="fa-solid fa-minimize"></i></button>
-					<button @click="selectAll" class="btn btn-outline-secondary" type="button"> {{ $p.t('international', 'alleGeplantenMarkieren') }} </button>
-					<button @click="acceptAll" class="btn btn-outline-secondary" type="button"> {{ $p.t('international', 'alleAkzeptierenPlan') }} </button>
-					<button @click="sendMail" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'mailButton')"> {{ $p.t('international', 'mailversenden') }} </button>
+			<div v-if="!notenUebernahme">
+				<div class="row">
+					<div class="col-md-6 d-flex gap-2">
+						<button @click="collapseGroup" class="btn btn-outline-secondary" type="button"><i id="togglegroup" class="fa-solid fa-minimize"></i></button>
+						<button @click="selectAll" class="btn btn-outline-secondary" type="button"> {{ $p.t('international', 'alleGeplantenMarkieren') }} </button>
+						<button v-if="!readonly"  @click="acceptAll" class="btn btn-outline-secondary" type="button"> {{ $p.t('international', 'alleAkzeptierenPlan') }} </button>
+						<button @click="sendMail" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'mailButton')"> {{ $p.t('international', 'mailversenden') }} </button>
+					</div>
 				</div>
-			</div>
-			<br />
-			<div class="col-xs-12">
-				<div class="btn-toolbar" role="toolbar">
-					  <div class="btn-group me-2" role="group" aria-label="First group">
-						<button @click="stglTodo" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'stgtodo')"><i class='fa-solid fas fa-tasks'></i></button>
-						<button @click="plannedMore" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'mehrverplant')"><i class='fa-solid fa-calendar-plus'></i></button>
-						<button @click="plannedLess" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'wenigerverplant')"><i class='fa-solid fa-calendar-minus'></i></button>
-						<button @click="confirmedMore" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'mehrbestaetigt')"><i class='fa-solid fa-calendar-check'></i></button>
-						<button @click="confirmedLess" class="btn btn-outline-secondary" type="button" :title="$p.t('international','wenigerbestaetigt')"><i class='fa-solid fa-calendar-times'></i></button>
-						<button @click="showOpen" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'allegeplanten')"><i class='fa-solid fa-calendar'></i></button>
-						<button @click="currentOpenSemester" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'alleMassnahmenJetzt')"><i class='fa-solid fa-clock'></i></button>
-						<button @click="currentSemester" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'alleStudierendeJetzt')"><i class='fa-solid fa-calendar'></i></button>
-						<button @click="lastSemester" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'lastSemester')"><i class='fa-solid fa-clock'></i></button>
-						<button @click="showUploaded" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'alledurchgefuehrten')"><i class='fa-solid fa-check'></i></button>
-						<button @click="deleteFilter" class="btn btn-outline-secondary" type="button" :title="$p.t('ui', 'alleAnzeigen')"><i class='fa-solid fa-users'></i></button>
-					  </div>
+				<br />
+				<div class="col-xs-12">
+					<div class="btn-toolbar" role="toolbar">
+						  <div class="btn-group me-2" role="group" aria-label="First group">
+							<button @click="stglTodo" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'stgtodo')"><i class='fa-solid fas fa-tasks'></i></button>
+							<button @click="plannedMore" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'mehrverplant')"><i class='fa-solid fa-calendar-plus'></i></button>
+							<button @click="plannedLess" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'wenigerverplant')"><i class='fa-solid fa-calendar-minus'></i></button>
+							<button @click="confirmedMore" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'mehrbestaetigt')"><i class='fa-solid fa-calendar-check'></i></button>
+							<button @click="confirmedLess" class="btn btn-outline-secondary" type="button" :title="$p.t('international','wenigerbestaetigt')"><i class='fa-solid fa-calendar-times'></i></button>
+							<button @click="showOpen" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'allegeplanten')"><i class='fa-solid fa-calendar'></i></button>
+							<button @click="currentOpenSemester" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'alleMassnahmenJetzt')"><i class='fa-solid fa-clock'></i></button>
+							<button @click="currentSemester" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'alleStudierendeJetzt')"><i class='fa-solid fa-calendar'></i></button>
+							<button @click="lastSemester" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'lastSemester')"><i class='fa-solid fa-clock'></i></button>
+							<button @click="showUploaded" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'alledurchgefuehrten')"><i class='fa-solid fa-check'></i></button>
+							<button @click="deleteFilter" class="btn btn-outline-secondary" type="button" :title="$p.t('ui', 'alleAnzeigen')"><i class='fa-solid fa-users'></i></button>
+						  </div>
+					</div>
 				</div>
 			</div>
 		</template>

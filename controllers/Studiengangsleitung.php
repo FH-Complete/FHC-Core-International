@@ -322,6 +322,10 @@ class Studiengangsleitung extends Auth_Controller
 						"freigabevon_uid" => $this->_uid
 					)
 				);
+
+				if (isError($insertResult))
+					$this->terminateWithJsonError($this->_ci->p->t('ui', 'fehlerBeimSpeichern'));
+
 				if (isSuccess($insertResult))
 				{
 					$count++;
@@ -336,13 +340,31 @@ class Studiengangsleitung extends Auth_Controller
 			$studiengang = getData($studiengang)[0];
 			$email = $studiengang->email;
 
+			$this->_ci->load->model('ressource/mitarbeiter_model', 'MitarbeiterModel');
+			$this->_ci->MitarbeiterModel->addJoin('tbl_benutzer', 'tbl_benutzer.uid = tbl_mitarbeiter.mitarbeiter_uid');
+			$this->_ci->MitarbeiterModel->addJoin('tbl_person', 'tbl_benutzer.person_id = tbl_person.person_id');
+			$mitarbeiter = $this->_ci->MitarbeiterModel->loadWhere(array('mitarbeiter_uid' => $this->_uid));
+
+			if (hasData($mitarbeiter))
+			{
+				$mitarbeiter = getData($mitarbeiter)[0];
+				$name = $mitarbeiter->anrede . ' ' . $mitarbeiter->vorname . ' ' . $mitarbeiter->nachname . ' (' . $mitarbeiter->kurzbz . ')';
+			}
+			else
+				$name = "";
+
 			$content = $this->_getContent($students);
 
 			$body_fields = array(
-				'lv' => $lv->bezeichnung,
-				'studiengang' => $studiengang->bezeichnung,
+				'name' => $name,
+				'lv_bezeichnung' => $lv->bezeichnung,
+				'lv_orgform_kurzbz' => $lv->orgform_kurzbz,
+				'lv_semester' => $lv->semester,
+				'stg_bezeichnung' => $studiengang->bezeichnung,
+				'stg_kuerzel' => strtoupper($studiengang->typ . $studiengang->kurzbz),
 				'semester' => $studiensemester_kurzbz,
 				'datentabelle' => $content,
+				'count' => count($students)
 			);
 			$this->load->helper('hlp_sancho');
 
@@ -463,6 +485,7 @@ class Studiengangsleitung extends Auth_Controller
 			'massnahme_eng' => $massnahmeZuordnung->bezeichnung_both[1],
 			'status' => $status,
 			'status_eng' => $status_englisch,
+			'anmerkung' => $massnahmeZuordnung->anmerkung_stgl,
 			'link' => anchor(site_url('extensions/FHC-Core-International/Student'), 'International Skills')
 		);
 
@@ -470,9 +493,10 @@ class Studiengangsleitung extends Auth_Controller
 
 		if ($massnahmeZuordnung->massnahme_status_kurzbz === 'confirmed')
 			$vorlage = 'InternationalStudentOverviewConf';
-		else if($massnahmeZuordnung->massnahme_status_kurzbz === 'accepted')
+		else if ($massnahmeZuordnung->massnahme_status_kurzbz === 'accepted')
 			$vorlage = 'InternationalStudentOverviewPlan';
-
+		else if ($massnahmeZuordnung->massnahme_status_kurzbz === 'declined')
+			$vorlage = 'InternationalStudentOverviewDecl';
 		// Send mail
 		sendSanchoMail(
 			$vorlage,
@@ -546,9 +570,9 @@ class Studiengangsleitung extends Auth_Controller
 	{
 		$html = '<table border="1"><tbody>';
 
-		$html .= '<tr>
-					<th>UID</th>
-				</tr>';
+		$html .= "<tr>
+					<th>". $this->p->t('person', 'uid') ."</th>
+				</tr>";
 
 		foreach ($students as $student)
 		{

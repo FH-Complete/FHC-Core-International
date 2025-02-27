@@ -92,7 +92,12 @@ class Massnahmen extends Auth_Controller
 			$this->terminateWithJsonError($this->_ci->p->t('ui', 'errorFelderFehlen'));
 		}
 
+		$bezeichnung = str_replace(",", "\,", $bezeichnung);
+		$bezeichnungeng = str_replace(",", "\,", $bezeichnungeng);
 		$bezeichnungmehrsprachig = "{". $bezeichnung. ", ". $bezeichnungeng . "}";
+
+		$beschreibung = str_replace(",", "\,", $beschreibung);
+		$beschreibungeng = str_replace(",", "\,", $beschreibungeng);
 		$beschreibungmehrsprachig = "{". $beschreibung. ", ". $beschreibungeng . "}";
 
 		$insert = $this->_ci->InternatmassnahmeModel->insert(array
@@ -100,7 +105,7 @@ class Massnahmen extends Auth_Controller
 				'bezeichnung_mehrsprachig' => $bezeichnungmehrsprachig,
 				'beschreibung_mehrsprachig' => $beschreibungmehrsprachig,
 				'ects' => $ects,
-				'aktiv' => $aktiv,
+				'aktiv' => !is_null($aktiv),
 				'insertamum' => date('Y-m-d H:i:s'),
 				'insertvon' => $this->_uid
 			)
@@ -145,7 +150,12 @@ class Massnahmen extends Auth_Controller
 			$this->terminateWithJsonError($this->_ci->p->t('ui', 'errorFelderFehlen'));
 		}
 
+		$bezeichnung = str_replace(",", "\,", $bezeichnung);
+		$bezeichnungeng = str_replace(",", "\,", $bezeichnungeng);
 		$bezeichnungmehrsprachig = "{". $bezeichnung. ", ". $bezeichnungeng . "}";
+
+		$beschreibung = str_replace(",", "\,", $beschreibung);
+		$beschreibungeng = str_replace(",", "\,", $beschreibungeng);
 		$beschreibungmehrsprachig = "{". $beschreibung. ", ". $beschreibungeng . "}";
 
 		$insert = $this->_ci->InternatmassnahmeModel->update(

@@ -43,7 +43,7 @@ export default {
 			},
 			phrasesLoaded: null,
 			sideMenuEntries: {},
-			tabulatorEventHandler: []
+			tabulatorEventHandler: [],
 		}
 	},
 	computed: {
@@ -64,40 +64,60 @@ export default {
 				layout: 'fitDataStretch',
 				selectable: false,
 				placeholder: "Keine Daten verfügbar",
-				groupBy: ["massnahme_status_kurzbz"],
-				groupValues: [
-					["planned", "accepted", "performed", "confirmed", "declined"],
-				],
-				groupClosedShowCalcs:true,
-				groupHeader: (value, count, data, group)=>
-				{
-					switch (value)
-					{
-						case 'planned' :
-							return this.$p.t('international', 'geplanteMassnahmen');
-						case 'accepted' :
-							return this.$p.t('international', 'akzpetierteMassnahmen');
-						case 'performed' :
-							return this.$p.t('international', 'durchgefuehrteMassnahmen');
-						case 'confirmed' :
-							return this.$p.t('international', 'bestaetigteMassnahmen');
-						case 'declined' :
-							return this.$p.t('international', 'abgelehnteMassnahmen');
-					}
-				},
 				columns: [
-					{title: this.$p.t('international', 'meinMassnahmeplan'), headerSort: false, field: 'bezeichnung'},
+					{title: this.$p.t('international', 'meinMassnahmeplan'), headerSort: false, field: 'bezeichnung', tooltip: (e, cell) => {
+
+							let div = document.createElement('div');
+							div.style.whiteSpace = 'pre-wrap';
+							div.innerHTML = cell.getData().beschreibung
+							return div
+						}
+					},
 					{
 						title: this.$p.t('international', 'internationalCredits'),
 						field: 'ects',
 						hozAlign: "right",
-						bottomCalc:"sum",
 						headerSort: false,
+						bottomCalcFormatter: (cell, calcValue) => {
+							return this.$p.t('international', 'ectsBestaetigt') + " " + cell.getValue() + ".00";
+						},
+						bottomCalc: (values, data, calcParams) =>
+						{
+							var sum = 0;
+
+							data.forEach(function(value)
+							{
+								if (value.massnahme_status_kurzbz === 'confirmed')
+								{
+									sum += parseInt(value.ects);
+								}
+							});
+							return sum;
+						},
 						bottomCalcParams:{precision:2}
 					},
 					{title: this.$p.t('international', 'studiensemesterGeplant'), headerSort: false, field: 'studiensemester_kurzbz'},
 					{title: this.$p.t('global', 'anmerkung'), field: 'anmerkung', headerSort: false},
-					{title: this.$p.t('international', 'anmerkungstgl'), field: 'anmerkung_stgl', headerSort: false},
+					{title: this.$p.t('global', 'status'), field: 'massnahme_status_kurzbz', headerSort: false,
+						sorter: (a, b, aRow, bRow) => this.customSorter(a, b, aRow, bRow),
+						formatter: (cell) =>
+						{
+							let value = cell.getValue();
+							switch (value)
+							{
+								case 'planned' :
+									return this.$p.t('international', 'geplanteMassnahmen');
+								case 'accepted' :
+									return this.$p.t('international', 'akzpetierteMassnahmen');
+								case 'performed' :
+									return this.$p.t('international', 'durchgefuehrteMassnahmen');
+								case 'confirmed' :
+									return this.$p.t('international', 'bestaetigteMassnahmen');
+								case 'declined' :
+									return this.$p.t('international', 'abgelehnteMassnahmen');
+							}
+						}},
+					{title: this.$p.t('international', 'anmerkungstgl'), field: 'anmerkung_stgl', headerSort: false, formatter: "textarea"},
 					{
 						title: this.$p.t('global', 'dokumentePDF'),
 						field: 'dms_id',
@@ -186,7 +206,7 @@ export default {
 						}
 					},
 				],
-				persistenceID: "14.01.2025",
+				persistenceID: "27.02.2025",
 			}
 		},
 
@@ -230,7 +250,7 @@ export default {
 							'dms_id' : data.dms_id,
 							'massnahme_status_kurzbz': 'performed'
 						}
-					).then(() => this.$refs.massnahmenStudentTable.tabulator.setGroupBy('massnahme_status_kurzbz'));
+					).then(() => this.setOrder());
 				}
 			});
 		},
@@ -246,7 +266,7 @@ export default {
 							'dms_id' : null,
 							'massnahme_status_kurzbz': 'accepted'
 						},
-					).then(() => this.$refs.massnahmenStudentTable.tabulator.setGroupBy('massnahme_status_kurzbz'));
+					).then(() => this.setOrder());
 				}
 			});
 		},
@@ -277,11 +297,13 @@ export default {
 						massnahme_id: data.massnahme_id,
 						status: 'planned',
 						anmerkung: data.anmerkung
-					});
+					}, true);
 
 					this.reset();
 					this.$refs.addMassnahmeModel.hide();
 				}
+			}).then(() => {
+				this.setOrder()
 			});
 		},
 		async deleteStudentMassnahme (cell)
@@ -306,7 +328,29 @@ export default {
 		showInfoText()
 		{
 			this.internationalskills = !this.internationalskills;
+		},
+		customSorter(a, b, aRow, bRow)
+		{
+			const order = ["planned", "accepted", "performed", "confirmed", "declined"];
+			let indexA = order.indexOf(a);
+			let indexB = order.indexOf(b);
+
+			if (indexA === indexB)
+			{
+				let nameA = aRow.getData().bezeichnung.toLowerCase();
+				let nameB = bRow.getData().bezeichnung.toLowerCase();
+				return nameA.localeCompare(nameB);
+			}
+
+			return (indexA === -1 ? order.length : indexA) - (indexB === -1 ? order.length : indexB);
+		},
+		setOrder()
+		{
+			this.$refs.massnahmenStudentTable.tabulator.setSort([
+				{ column: 'massnahme_status_kurzbz', dir: 'asc'},
+			]);
 		}
+
 	},
 
 	template: `
@@ -315,9 +359,40 @@ export default {
 			<h3 class="h4">{{ $p.t('international', 'internationalskills') }}
 				<i class="fa fa-info-circle text-right" @click="showInfoText"></i>
 			</h3>
-			<div class="row">
+			<div class="row" v-show="internationalskills">
 				<div class="col-xl-6">
-					<div class="alert alert-info" v-show="internationalskills" v-html="$p.t('international', 'internationalbeschreibung')"></div>
+					<div class="alert alert-info" v-html="$p.t('international', 'internationalbeschreibung')"></div>
+				</div>
+				<div class="col-6 highlight">
+					<div class="card statuscard">
+						<div class="card-header">
+							Status
+						</div>
+						<table class="table table-sm p-3 statustable">
+							<tbody>
+								<tr>
+									<td class="ps-2">{{ $p.t('international', 'geplanteMassnahmen') }}</td>
+									<td class="ps-2">{{ $p.t('international', 'geplanteMassnahmenDesc') }}</td>
+								</tr>
+								<tr>
+									<td class="ps-2">{{ $p.t('international', 'akzpetierteMassnahmen') }}</td>
+									<td class="ps-2">{{ $p.t('international', 'statusAkzeptiertDesc') }}</td>
+								</tr>
+								<tr>
+									<td class="ps-2">{{ $p.t('international', 'durchgefuehrteMassnahmen') }}</td>
+									<td class="ps-2">{{ $p.t('international', 'statusDurchgefuehrtDesc') }}</td>
+								</tr>
+								<tr>
+									<td class="ps-2">{{ $p.t('international', 'bestaetigteMassnahmen') }}</td>
+									<td class="ps-2">{{ $p.t('international', 'statusBestaetigtDesc') }}</td>
+								</tr>
+								<tr>
+									<td class="ps-2">{{ $p.t('international', 'abgelehnteMassnahmen') }}</td>
+									<td class="ps-2">{{ $p.t('international', 'statusAbgelehntDesc') }}</td>
+								</tr>
+							</tbody>
+						</table>
+					</div>
 				</div>
 			</div>
 			<hr />

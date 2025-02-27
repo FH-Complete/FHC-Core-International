@@ -182,7 +182,14 @@ export default {
 						},
 						visible:false
 					},
-					{title: this.$p.t('ui', 'bezeichnung'), field: 'bezeichnung', headerFilter: true, width: 400},
+					{title: this.$p.t('ui', 'bezeichnung'), field: 'bezeichnung', headerFilter: true, width: 400, tooltip: (e, cell) => {
+
+							let div = document.createElement('div');
+							div.style.whiteSpace = 'pre-wrap';
+							div.innerHTML = cell.getData().beschreibung
+							return div
+						}
+					},
 					{title: this.$p.t('global', 'status'), field: 'status_bezeichnung', headerFilter: true, width: 100},
 					{title: this.$p.t('global', 'anmerkung'), field: 'anmerkung', headerFilter: true},
 					{title: this.$p.t('international', 'anmerkungstgl'), field: 'anmerkung_stgl', headerFilter: true, width: 220},
@@ -739,12 +746,11 @@ export default {
 
 			this.setNote(changedData);
 		},
-		setNote(changedData){
+		setNote(changedData) {
 			this.$refs.loader.show();
 			Vue.$fhcapi.Studiengangsleitung.setNote(changedData).then(response => {
 				if (CoreRESTClient.isSuccess(response.data))
 				{
-
 					let responseData = (CoreRESTClient.getData(response.data));
 
 					if (responseData.count === 0)
@@ -769,9 +775,15 @@ export default {
 						let person = responseData.count === 1 ? 'Person' : 'Personen';
 						this.$fhcAlert.alertSuccess(`Es wurde bei ${responseData.count} ${person} eine Note eingetragen!`);
 					}
-
-					this.$refs.loader.hide();
 				}
+				else
+				{
+					this.$fhcAlert.alertWarning(CoreRESTClient.getError(response.data));
+				}
+			}).catch(error => {
+				this.$fhcAlert.alertWarning(this.$p.t('ui/fehlerBeimSpeichern'));
+			}) .finally(() => {
+				this.$refs.loader.hide();
 			});
 		},
 		collapseGroup()

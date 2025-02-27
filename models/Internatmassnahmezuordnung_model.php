@@ -49,7 +49,8 @@ class Internatmassnahmezuordnung_model extends DB_Model
 					zstatus.bezeichnung_mehrsprachig AS status_bezeichnung_both,
 					massnahme.bezeichnung_mehrsprachig AS bezeichnung_both,
 					person.vorname,
-					person.nachname
+					person.nachname,
+					zuordnung.anmerkung_stgl
 			FROM extension.tbl_internat_massnahme_zuordnung zuordnung
 				JOIN extension.tbl_internat_massnahme massnahme USING(massnahme_id)
 				JOIN extension.tbl_internat_massnahme_zuordnung_status status ON zuordnung.massnahme_zuordnung_id = status.massnahme_zuordnung_id
@@ -119,6 +120,7 @@ class Internatmassnahmezuordnung_model extends DB_Model
 			person.vorname,
 			person.nachname,
 			massnahme.bezeichnung_mehrsprachig['. $language .'] AS "bezeichnung",
+			massnahme.beschreibung_mehrsprachig['. $language .'] AS "beschreibung",
 			status.bezeichnung_mehrsprachig['.$language.'] AS "status_bezeichnung",
 			status.massnahme_status_kurzbz,
 			zuordnung.anmerkung,
@@ -155,7 +157,7 @@ class Internatmassnahmezuordnung_model extends DB_Model
 			get_rolle_prestudent(prestudent.prestudent_id, NULL) AS "status_kurzbz"
 			FROM
 		tbl_studentlehrverband
-		JOIN  tbl_student student ON tbl_studentlehrverband.student_uid = student.student_uid
+		JOIN tbl_student student ON tbl_studentlehrverband.student_uid = student.student_uid
 		JOIN tbl_prestudent prestudent ON prestudent.prestudent_id = student.prestudent_id
 		JOIN tbl_person person ON prestudent.person_id = person.person_id
 		JOIN tbl_studiengang studiengang on prestudent.studiengang_kz = studiengang.studiengang_kz
@@ -270,6 +272,7 @@ class Internatmassnahmezuordnung_model extends DB_Model
 					massnahme.ects,
 					zuordnung.studiensemester_kurzbz,
 					status.bezeichnung_mehrsprachig['.$language.'] AS "status",
+					massnahme.beschreibung_mehrsprachig['. $language .'] AS "beschreibung",
 					status.massnahme_status_kurzbz,
 					zuordnung.anmerkung,
 					zuordnung.anmerkung_stgl,
@@ -302,7 +305,7 @@ class Internatmassnahmezuordnung_model extends DB_Model
 						WHEN status.massnahme_status_kurzbz = \'performed\' THEN 3
 						WHEN status.massnahme_status_kurzbz = \'confirmed\' THEN 4
 						WHEN status.massnahme_status_kurzbz = \'declined\' THEN 5
-					END';
+					END, massnahme.bezeichnung_mehrsprachig['.$language.']';
 
 		return $this->execReadOnlyQuery($query, array($student));
 	}

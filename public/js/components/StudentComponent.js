@@ -97,7 +97,27 @@ export default {
 						bottomCalcParams:{precision:2}
 					},
 					{title: this.$p.t('international', 'studiensemesterGeplant'), headerSort: false, field: 'studiensemester_kurzbz'},
-					{title: this.$p.t('global', 'anmerkung'), field: 'anmerkung', headerSort: false, formatter: "textarea", width: 300},
+					{
+						title: this.$p.t('global', 'anmerkung'),
+						field: 'anmerkung',
+						headerSort: false,
+						hozAlign: "center",
+						formatter: (cell, formatterParams, onRendered) =>   {
+							let value = cell.getValue()
+							if (!value)
+								return;
+							const icon = document.createElement('i');
+							icon.className = 'fa fa-info-circle text-primary';
+							icon.style.cursor = 'pointer';
+							icon.addEventListener('click', () => {
+								this.showPopup(value, this.$p.t('global', 'anmerkung'));
+							});
+
+							const div = document.createElement('div');
+							div.className = "d-flex justify-content-center";
+							div.appendChild(icon);
+							return div;
+						}},
 					{title: this.$p.t('global', 'status'), field: 'massnahme_status_kurzbz', headerSort: false,
 						sorter: (a, b, aRow, bRow) => this.customSorter(a, b, aRow, bRow),
 						formatter: (cell) =>
@@ -116,8 +136,54 @@ export default {
 								case 'declined' :
 									return this.$p.t('international', 'abgelehnteMassnahmen');
 							}
-						}},
-					{title: this.$p.t('international', 'anmerkungstgl'), field: 'anmerkung_stgl', headerSort: false, formatter: "textarea", width: 300},
+						},
+						tooltip: (e, cell) => {
+
+							let value = cell.getValue();
+							let text = '';
+							switch (value)
+							{
+								case 'planned' :
+									text = this.$p.t('international', 'geplanteMassnahmen');
+									break;
+								case 'accepted' :
+									text = this.$p.t('international', 'akzpetierteMassnahmen');
+									break;
+								case 'performed' :
+									text = this.$p.t('international', 'durchgefuehrteMassnahmen');
+									break;
+								case 'confirmed' :
+									text = this.$p.t('international', 'bestaetigteMassnahmen');
+									break;
+								case 'declined' :
+									text = this.$p.t('international', 'abgelehnteMassnahmen');
+									break;
+							}
+							return text;
+						}
+					},
+					{
+						title: this.$p.t('international', 'anmerkungstgl'),
+						field: 'anmerkung_stgl',
+						headerSort: false,
+						formatter: (cell, formatterParams, onRendered) =>   {
+
+							let value = cell.getValue()
+							if (!value)
+								return;
+							const icon = document.createElement('i');
+							icon.className = 'fa fa-info-circle text-primary';
+							icon.style.cursor = 'pointer';
+							icon.addEventListener('click', () => {
+								this.showPopup(value, this.$p.t('international', 'anmerkungstgl'));
+							});
+
+							const div = document.createElement('div');
+							div.className = "d-flex justify-content-center";
+							div.appendChild(icon);
+							return div;
+						}
+					},
 					{
 						title: this.$p.t('global', 'dokumentePDF'),
 						field: 'dms_id',
@@ -185,6 +251,9 @@ export default {
 							}
 
 							return div;
+						},
+						tooltip: () => {
+							return this.$p.t('ui', 'hochladen');
 						}
 					},
 					{
@@ -193,11 +262,11 @@ export default {
 						headerSort: false,
 						formatter: (cell, formatterParams, onRendered) =>
 						{
-							var status = cell.getData().massnahme_status_kurzbz;
+							let status = cell.getData().massnahme_status_kurzbz;
 
 							if (status !== 'confirmed' && status !== 'declined')
 							{
-								var deleteMassnahme = this._addButton('fa-solid fa-remove', 'massnahmeLoeschen');
+								let deleteMassnahme = this._addButton('fa-solid fa-remove', 'massnahmeLoeschen');
 								deleteMassnahme.addEventListener('click', () => this.deleteStudentMassnahme(cell));
 								return deleteMassnahme;
 							}
@@ -219,6 +288,23 @@ export default {
 	methods: {
 		newSideMenuEntryHandler: function(payload) {
 			this.sideMenuEntries = payload;
+		},
+		showPopup(value, title)
+		{
+			BsModal.popup(
+				Vue.h('div', {
+					style: {
+						whiteSpace: 'pre-wrap'
+					}
+				}, value),
+				{
+					centered: true,
+					size: 'lg',
+					backdrop: true,
+				},
+				title
+			);
+
 		},
 		load: function()
 		{

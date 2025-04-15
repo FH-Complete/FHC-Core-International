@@ -97,7 +97,7 @@ export default {
 						bottomCalcParams:{precision:2}
 					},
 					{title: this.$p.t('international', 'studiensemesterGeplant'), headerSort: false, field: 'studiensemester_kurzbz'},
-					{title: this.$p.t('global', 'anmerkung'), field: 'anmerkung', headerSort: false},
+					{title: this.$p.t('global', 'anmerkung'), field: 'anmerkung', headerSort: false, formatter: "textarea", width: 300},
 					{title: this.$p.t('global', 'status'), field: 'massnahme_status_kurzbz', headerSort: false,
 						sorter: (a, b, aRow, bRow) => this.customSorter(a, b, aRow, bRow),
 						formatter: (cell) =>
@@ -117,7 +117,7 @@ export default {
 									return this.$p.t('international', 'abgelehnteMassnahmen');
 							}
 						}},
-					{title: this.$p.t('international', 'anmerkungstgl'), field: 'anmerkung_stgl', headerSort: false, formatter: "textarea"},
+					{title: this.$p.t('international', 'anmerkungstgl'), field: 'anmerkung_stgl', headerSort: false, formatter: "textarea", width: 300},
 					{
 						title: this.$p.t('global', 'dokumentePDF'),
 						field: 'dms_id',
@@ -206,7 +206,7 @@ export default {
 						}
 					},
 				],
-				persistenceID: "27.02.2025",
+				persistenceID: "15.04.2025",
 			}
 		},
 

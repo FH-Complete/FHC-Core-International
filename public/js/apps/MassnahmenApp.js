@@ -7,12 +7,10 @@ Vue.$fhcapi = fhcapifactory;
 const massnahmenApp = Vue.createApp({
 	components: {
 		Massnahmen,
-		Phrasen,
-		FhcAlert
+		Phrasen
 	}
 });
 massnahmenApp
 	.use(primevue.config.default)
 	.use(Phrasen)
-	.use(FhcAlert)
 	.mount("#main");

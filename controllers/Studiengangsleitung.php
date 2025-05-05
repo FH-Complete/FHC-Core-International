@@ -18,13 +18,12 @@ class Studiengangsleitung extends Auth_Controller
 	{
 		parent::__construct(array(
 				'index' => self::BERECHTIGUNG_KURZBZ .':r',
-				'setStatus' => self::BERECHTIGUNG_KURZBZ .':r',
-				'setNote' => self::BERECHTIGUNG_KURZBZ .':r',
+				'setStatus' => self::BERECHTIGUNG_KURZBZ .':rw',
+				'setNote' => self::BERECHTIGUNG_KURZBZ .':rw',
 				'download' => self::BERECHTIGUNG_KURZBZ.':r',
 				'getStudents' => self::BERECHTIGUNG_KURZBZ.':r',
 				'getLVs' => self::BERECHTIGUNG_KURZBZ.':r',
 				'load' => self::BERECHTIGUNG_KURZBZ.':r',
-				'benoten' => self::BERECHTIGUNG_KURZBZ.':r',
 				'loadBenotungen' => self::BERECHTIGUNG_KURZBZ.':r',
 				'getOrgForms' => self::BERECHTIGUNG_KURZBZ.':r',
 			)
@@ -207,6 +206,12 @@ class Studiengangsleitung extends Auth_Controller
 		if (is_array($postJson))
 			return $this->_setStatusMulti($postJson);
 
+		if (!property_exists($postJson, 'massnahme_id'))
+			$this->terminateWithJsonError('Error: Massnahme_id missing');
+
+		if (!property_exists($postJson, 'status'))
+			$this->terminateWithJsonError('Error: status missing');
+
 		$massnahmeZuordnungPost = $postJson->massnahme_id;
 		$statusPost = $postJson->status;
 		$absagePost = isset($postJson->absageGrund) ? $postJson->absageGrund : '';
@@ -261,6 +266,11 @@ class Studiengangsleitung extends Auth_Controller
 	{
 		$stgBerechtigung = $this->_ci->permissionlib->getSTG_isEntitledFor(self::BERECHTIGUNG_KURZBZ);
 		$postJson = $this->getPostJSON();
+		if (isEmptyArray($postJson))
+			return $this->outputJsonSuccess(0);
+
+		if (!isset($postJson[0]) || !isset($postJson[0]->stg) || !isset($postJson[0]->lv) || !isset($postJson[0]->stsem))
+			$this->terminateWithJsonError("Error: Fehler beim Setzen der Note");
 
 		$studiengang = $postJson[0]->stg;
 		if (!in_array($studiengang, $stgBerechtigung))
@@ -277,13 +287,22 @@ class Studiengangsleitung extends Auth_Controller
 		if (isError($studiensemester) || !hasData($studiensemester))
 			$this->terminateWithJsonError("Error");
 
+		$studiensemester_kurzbz = getData($studiensemester)[0]->studiensemester_kurzbz;
 		$count = 0;
 		$students = [];
 		foreach ($postJson as $person)
 		{
+			if (!isset($person->student_uid) || !isset($person->lv))
+				continue;
+
+			$enoughECTs = $this->_ci->InternatmassnahmezuordnungModel->enoughECTs($person->student_uid);
+
+			if (!hasData($enoughECTs))
+				continue;
+
 			$hasBenotung = $this->_ci->LvgesamtnoteModel->load(array(
 				'student_uid' => $person->student_uid,
-				'studiensemester_kurzbz' => getData($studiensemester)[0]->studiensemester_kurzbz,
+				'studiensemester_kurzbz' => $studiensemester_kurzbz,
 				'lehrveranstaltung_id' => $person->lv
 			));
 
@@ -292,7 +311,7 @@ class Studiengangsleitung extends Auth_Controller
 				$insertResult = $this->_ci->LvgesamtnoteModel->insert(
 					array(
 						"lehrveranstaltung_id" => $person->lv,
-						"studiensemester_kurzbz" => getData($studiensemester)[0]->studiensemester_kurzbz,
+						"studiensemester_kurzbz" => $studiensemester_kurzbz,
 						"student_uid" => $person->student_uid,
 						"note" => self::NOTE,
 						"mitarbeiter_uid" => $this->_uid,
@@ -303,6 +322,10 @@ class Studiengangsleitung extends Auth_Controller
 						"freigabevon_uid" => $this->_uid
 					)
 				);
+
+				if (isError($insertResult))
+					$this->terminateWithJsonError($this->_ci->p->t('ui', 'fehlerBeimSpeichern'));
+
 				if (isSuccess($insertResult))
 				{
 					$count++;
@@ -317,13 +340,31 @@ class Studiengangsleitung extends Auth_Controller
 			$studiengang = getData($studiengang)[0];
 			$email = $studiengang->email;
 
+			$this->_ci->load->model('ressource/mitarbeiter_model', 'MitarbeiterModel');
+			$this->_ci->MitarbeiterModel->addJoin('tbl_benutzer', 'tbl_benutzer.uid = tbl_mitarbeiter.mitarbeiter_uid');
+			$this->_ci->MitarbeiterModel->addJoin('tbl_person', 'tbl_benutzer.person_id = tbl_person.person_id');
+			$mitarbeiter = $this->_ci->MitarbeiterModel->loadWhere(array('mitarbeiter_uid' => $this->_uid));
+
+			if (hasData($mitarbeiter))
+			{
+				$mitarbeiter = getData($mitarbeiter)[0];
+				$name = $mitarbeiter->anrede . ' ' . $mitarbeiter->vorname . ' ' . $mitarbeiter->nachname . ' (' . $mitarbeiter->kurzbz . ')';
+			}
+			else
+				$name = "";
+
 			$content = $this->_getContent($students);
 
 			$body_fields = array(
-				'lv' => $lv->bezeichnung,
-				'studiengang' => $studiengang->bezeichnung,
-				'semester' => getData($studiensemester)[0]->studiensemester_kurzbz,
+				'name' => $name,
+				'lv_bezeichnung' => $lv->bezeichnung,
+				'lv_orgform_kurzbz' => $lv->orgform_kurzbz,
+				'lv_semester' => $lv->semester,
+				'stg_bezeichnung' => $studiengang->bezeichnung,
+				'stg_kuerzel' => strtoupper($studiengang->typ . $studiengang->kurzbz),
+				'semester' => $studiensemester_kurzbz,
 				'datentabelle' => $content,
+				'count' => count($students)
 			);
 			$this->load->helper('hlp_sancho');
 
@@ -334,7 +375,7 @@ class Studiengangsleitung extends Auth_Controller
 				'International Skills: Noten'
 			);
 		}
-		$this->outputJsonSuccess($count);
+		$this->outputJsonSuccess(array('count' => $count, 'students' => $students));
 	}
 
 	public function download()
@@ -444,6 +485,7 @@ class Studiengangsleitung extends Auth_Controller
 			'massnahme_eng' => $massnahmeZuordnung->bezeichnung_both[1],
 			'status' => $status,
 			'status_eng' => $status_englisch,
+			'anmerkung' => $massnahmeZuordnung->anmerkung_stgl,
 			'link' => anchor(site_url('extensions/FHC-Core-International/Student'), 'International Skills')
 		);
 
@@ -451,9 +493,10 @@ class Studiengangsleitung extends Auth_Controller
 
 		if ($massnahmeZuordnung->massnahme_status_kurzbz === 'confirmed')
 			$vorlage = 'InternationalStudentOverviewConf';
-		else if($massnahmeZuordnung->massnahme_status_kurzbz === 'accepted')
+		else if ($massnahmeZuordnung->massnahme_status_kurzbz === 'accepted')
 			$vorlage = 'InternationalStudentOverviewPlan';
-
+		else if ($massnahmeZuordnung->massnahme_status_kurzbz === 'declined')
+			$vorlage = 'InternationalStudentOverviewDecl';
 		// Send mail
 		sendSanchoMail(
 			$vorlage,
@@ -527,9 +570,9 @@ class Studiengangsleitung extends Auth_Controller
 	{
 		$html = '<table border="1"><tbody>';
 
-		$html .= '<tr>
-					<th>UID</th>
-				</tr>';
+		$html .= "<tr>
+					<th>". $this->p->t('person', 'uid') ."</th>
+				</tr>";
 
 		foreach ($students as $student)
 		{

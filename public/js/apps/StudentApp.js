@@ -9,11 +9,9 @@ const studentApp = Vue.createApp({
 	components: {
 		Student,
 		Phrasen,
-		FhcAlert
 	}
 });
 studentApp
 	.use(primevue.config.default)
 	.use(Phrasen)
-	.use(FhcAlert)
 	.mount("#main");

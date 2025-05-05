@@ -8,12 +8,10 @@ const studiengangsleitungApp = Vue.createApp({
 	components: {
 		Studiengangsleitung,
 		Phrasen,
-		FhcAlert
 	}
 });
 
 studiengangsleitungApp
 	.use(primevue.config.default)
 	.use(Phrasen)
-	.use(FhcAlert)
 	.mount("#main");

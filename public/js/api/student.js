@@ -1,4 +1,4 @@
-import {CoreRESTClient} from "../../../../../public/js/RESTClient";
+import {CoreRESTClient} from "../../../../../public/js/RESTClient.js";
 
 export default {
 

@@ -4,6 +4,7 @@ import CoreBaseLayout from '../../../../js/components/layout/BaseLayout.js';
 import BsModal from '../../../../js/components/Bootstrap/Modal.js';
 import FormInput from "../../../../js/components/Form/Input.js";
 import Dms from "../../../../js/components/Form/Upload/Dms.js";
+import FhcLoader from '../../../../js/components/Loader.js';
 
 export default {
 	name: 'Student',
@@ -24,7 +25,8 @@ export default {
 		CoreBaseLayout,
 		BsModal,
 		FormInput,
-		Dms
+		Dms,
+		FhcLoader
 	},
 	data: function() {
 		return {
@@ -326,6 +328,7 @@ export default {
 		},
 		uploadNachweis: function(data)
 		{
+			this.$refs.loader.show();
 			Vue.$fhcapi.Student.uploadNachweis(data).then(response => {
 				if (CoreRESTClient.isSuccess(response.data))
 				{
@@ -338,6 +341,8 @@ export default {
 						}
 					).then(() => this.setOrder());
 				}
+			}).finally(() => {
+				this.$refs.loader.hide();
 			});
 		},
 		deleteNachweis: function(data)
@@ -545,5 +550,6 @@ export default {
 			</bs-modal>
 		</template>
 	</core-base-layout>
+	<fhc-loader ref="loader" :timeout="0"></fhc-loader>
 	`
 };

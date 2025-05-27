@@ -29,7 +29,7 @@ export default {
 	uploadNachweis(data)
 	{
 		try {
-			return CoreRESTClient.post('/extensions/FHC-Core-International/Student/studentAddNachweis', data, {Headers: { "Content-Type": "multipart/form-data" }});
+			return CoreRESTClient.post('/extensions/FHC-Core-International/Student/studentAddNachweis', data, {Headers: { "Content-Type": "multipart/form-data" }, timeout: 300000});
 		} catch (error) {
 			throw error;
 		}

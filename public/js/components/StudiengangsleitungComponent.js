@@ -73,6 +73,7 @@ export default {
 			selectedOrgform: "",
 			orgformen: "",
 			filteredUids: [],
+			fullGroupDataMap: null,
 			tabulatorEventHandler: [
 				{
 					event: "rowClick",
@@ -81,6 +82,12 @@ export default {
 							e.stopPropagation();
 							row.deselect();
 						}
+					}
+				},
+				{
+					event: "dataLoaded",
+					handler: (e, row) => {
+						this.fullGroupDataMap = null;
 					}
 				}
 			],
@@ -124,10 +131,26 @@ export default {
 				selectableCheck: (row) => {
 					return row.getData().massnahme_status_kurzbz === this.selectableStatus;
 				},
-				groupHeader: function(value, count, data, group)
+				groupHeader: (value, count, data) =>
 				{
+					if (!this.fullGroupDataMap)
+					{
+						this.fullGroupDataMap = new Map();
+						let allData =  this.$refs.massnahmenTable.tabulator.getData();
+						allData.forEach(item => {
+							if (!this.fullGroupDataMap.has(item.student_uid))
+							{
+								this.fullGroupDataMap.set(item.student_uid, []);
+							}
+							this.fullGroupDataMap.get(item.student_uid).push(item);
+						});
+					}
+
+					let fullGroupData = this.fullGroupDataMap.get(value) || [];
+
 					let sum = 0;
-					data.forEach(function(item) {
+					fullGroupData.forEach(function(item)
+					{
 						if (item.massnahme_status_kurzbz === 'confirmed')
 						{
 							sum += parseInt(item.ects);
@@ -135,15 +158,15 @@ export default {
 					});
 
 					let color = '';
-					if (data.some(item => item.massnahme_status_kurzbz === null) || data.some(item => item.massnahme_status_kurzbz === "declined"))
+					if (fullGroupData.some(item => item.massnahme_status_kurzbz === null) || fullGroupData.some(item => item.massnahme_status_kurzbz === "declined"))
 						color = 'red';
-					if (data.some(item => item.massnahme_status_kurzbz === "confirmed") && sum < 5)
+					if (fullGroupData.some(item => item.massnahme_status_kurzbz === "confirmed") && sum < 5)
 						color = 'greenyellow';
-					if (data.some(item => item.massnahme_status_kurzbz === "accepted"))
+					if (fullGroupData.some(item => item.massnahme_status_kurzbz === "accepted"))
 						color = "yellow";
-					if (data.some(item => item.massnahme_status_kurzbz === "planned") || data.some(item => item.massnahme_status_kurzbz === "performed"))
+					if (fullGroupData.some(item => item.massnahme_status_kurzbz === "planned") || fullGroupData.some(item => item.massnahme_status_kurzbz === "performed"))
 						color = 'orange';
-					if (data.some(item => item.massnahme_status_kurzbz === "confirmed") && sum >= 5)
+					if (fullGroupData.some(item => item.massnahme_status_kurzbz === "confirmed") && sum >= 5)
 						color = "green";
 
 					let outerDiv = document.createElement('div');
@@ -158,7 +181,7 @@ export default {
 					innerDiv.style.display = 'inline-flex';
 
 					outerDiv.appendChild(innerDiv);
-					let textContent = document.createTextNode(data[0].vorname + " " + data[0].nachname + " (" + value + ") ");
+					let textContent = document.createTextNode(fullGroupData[0].vorname + " " + fullGroupData[0].nachname + " (" + value + ") ");
 					outerDiv.appendChild(textContent);
 
 					return outerDiv;
@@ -449,6 +472,7 @@ export default {
 							}
 						)
 					});
+					this.fullGroupDataMap = null;
 					this.$refs.massnahmenTable.tabulator.rowManager.refreshActiveData();
 					this.$refs.massnahmenTable.tabulator.deselectRow();
 					this.$fhcAlert.alertSuccess("Erfolgreich gesetzt");
@@ -472,6 +496,7 @@ export default {
 							'anmerkung_stgl' : data.anmerkung_stgl
 						},
 					).then(() => {
+						this.fullGroupDataMap = null;
 						this.$refs.massnahmenTable.tabulator.rowManager.refreshActiveData();
 						this.$refs.absageModal.hide()
 						this.$refs.massnahmenTable.tabulator.deselectRow()

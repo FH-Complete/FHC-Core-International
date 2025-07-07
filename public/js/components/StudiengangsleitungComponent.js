@@ -4,7 +4,7 @@ import CoreBaseLayout from '../../../../js/components/layout/BaseLayout.js';
 import BsModal from '../../../../js/components/Bootstrap/Modal.js';
 import FormInput from "../../../../js/components/Form/Input.js";
 import FhcLoader from '../../../../js/components/Loader.js';
-
+import { dateFilter } from "../../../../js/tabulator/filters/Dates.js";
 export default {
 	name: 'Studiengangsleitung',
 
@@ -136,7 +136,7 @@ export default {
 					if (!this.fullGroupDataMap)
 					{
 						this.fullGroupDataMap = new Map();
-						let allData =  this.$refs.massnahmenTable.tabulator.getData();
+						let allData = this.$refs.massnahmenTable.tabulator.getData();
 						allData.forEach(item => {
 							if (!this.fullGroupDataMap.has(item.student_uid))
 							{
@@ -174,19 +174,21 @@ export default {
 					outerDiv.style.alignItems = 'center';
 
 					let innerDiv = document.createElement('div');
-					innerDiv.classList.add(color);
+					if (color)
+						innerDiv.classList.add(color);
 					innerDiv.style.width = '50px';
 					innerDiv.style.height = '20px';
 					innerDiv.style.marginRight = '10px';
 					innerDiv.style.display = 'inline-flex';
 
 					outerDiv.appendChild(innerDiv);
-					let textContent = document.createTextNode(fullGroupData[0].vorname + " " + fullGroupData[0].nachname + " (" + value + ") ");
+
+					const userInfo = fullGroupData[0] ? `${fullGroupData[0].vorname} ${fullGroupData[0].nachname}` : '';
+					const textContent = document.createTextNode(`${userInfo} (${value}) `);
 					outerDiv.appendChild(textContent);
 
 					return outerDiv;
 				},
-
 				columns: [
 					{title: this.$p.t('lehre', 'studiengang'), field: 'studiengang_kurz', headerFilter: true},
 					{title: this.$p.t('lehre', 'organisationsform'), field: 'orgform', headerFilter: true},
@@ -312,6 +314,24 @@ export default {
 						}
 					},
 					{title: this.$p.t('lehre', 'studiensemester'), field: 'student_studiensemester', headerFilter: true},
+					{title: this.$p.t('global', 'datum'), field: 'datum',
+						headerFilterFunc: 'dates',
+						headerFilter: dateFilter,
+						formatter: (cell) =>
+						{
+							let val = cell.getValue();
+							if (!val)
+								return '&nbsp;';
+
+								let date = new Date(val);
+
+								return date.toLocaleDateString('de-AT', {
+									year: "numeric",
+									month: "2-digit",
+									day: "2-digit",
+								});
+						}
+					},
 					{
 						title: this.$p.t('global', 'kontakt'),
 						field: 'kontakt',
@@ -324,7 +344,7 @@ export default {
 						}
 					},
 				],
-				persistenceID: "28.02.2025",
+				persistenceID: "25.06.2025",
 			}
 		},
 		getSem: {
@@ -493,7 +513,8 @@ export default {
 							'status_bezeichnung' : data.status_bezeichnung,
 							'akzeptieren': data.status,
 							'massnahme_akzeptieren': data.status,
-							'anmerkung_stgl' : data.anmerkung_stgl
+							'anmerkung_stgl' : data.anmerkung_stgl,
+							'datum': Date.now()
 						},
 					).then(() => {
 						this.fullGroupDataMap = null;
@@ -833,6 +854,14 @@ export default {
 		{
 			this.$refs.massnahmenTable.tabulator.setGroupStartOpen(false);
 		},
+		showAllFromStudent()
+		{
+			const table = this.$refs.massnahmenTable.tabulator;
+			const filteredRows = table.getRows("active");
+			const student_ids = [...new Set(filteredRows.map(row => row.getData().student_uid))];
+
+			this.$refs.massnahmenTable.tabulator.setFilter("student_uid", "in", student_ids);
+		},
 	},
 
 	template: `
@@ -985,6 +1014,7 @@ export default {
 				<div class="row">
 					<div class="col-md-6 d-flex gap-2">
 						<button @click="collapseGroup" class="btn btn-outline-secondary" type="button"><i id="togglegroup" class="fa-solid fa-minimize"></i></button>
+						<button @click="showAllFromStudent" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'personenMassnahmen')"><i class="fa-solid fa-user-plus"></i></button>
 						<button @click="selectAll" class="btn btn-outline-secondary" type="button"> {{ $p.t('international', 'alleGeplantenMarkieren') }} </button>
 						<button v-if="!readonly"  @click="acceptAll" class="btn btn-outline-secondary" type="button"> {{ $p.t('international', 'alleAkzeptierenPlan') }} </button>
 						<button @click="sendMail" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'mailButton')"> {{ $p.t('international', 'mailversenden') }} </button>

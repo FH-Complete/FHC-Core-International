@@ -124,6 +124,12 @@ class Internatmassnahmezuordnung_model extends DB_Model
 			status.bezeichnung_mehrsprachig['.$language.'] AS "status_bezeichnung",
 			status.massnahme_status_kurzbz,
 			zuordnung.anmerkung,
+			(
+				SELECT datum
+				FROM extension.tbl_internat_massnahme_zuordnung_status
+				WHERE tbl_internat_massnahme_zuordnung_status.massnahme_zuordnung_id = zuordnung.massnahme_zuordnung_id
+				ORDER BY massnahme_zuordnung_status_id DESC LIMIT 1
+			) as datum,
 			zuordnung.anmerkung_stgl as anmerkung_stgl,
 			zuordnung.studiensemester_kurzbz AS "studiensemester",
 			zuordnung.dms_id AS "document",

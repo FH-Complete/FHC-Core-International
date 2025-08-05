@@ -71,7 +71,7 @@ class Studiengangsleitung extends Auth_Controller
 		$where = 'studiengang_kz IN (\'' . implode('\',\'', $stgBerechtigung) . '\')';
 		$studiengaenge = $this->_ci->StudiengangModel->loadWhere($where);
 
-		$aktStsem = $this->_ci->StudiensemesterModel->getAkt();
+		$aktStsem = $this->_ci->StudiensemesterModel->getLastOrAktSemester();
 
 		$this->_ci->StudiensemesterModel->addOrder('start', 'DESC');
 		$studiensemester = $this->_ci->StudiensemesterModel->load();
@@ -98,7 +98,6 @@ class Studiengangsleitung extends Auth_Controller
 		if (!in_array($studiengang, $stgBerechtigung))
 			$this->terminateWithJsonError($this->_ci->p->t('ui', 'keineBerechtigung'));
 
-		$aktStsem = $this->_ci->StudiensemesterModel->getAkt();
 		$this->outputJsonSuccess($this->_ci->InternatmassnahmezuordnungModel->getDataStudiengangsleitung(array($studiengang)));
 	}
 

@@ -221,7 +221,7 @@ export default {
 
 									const file = input.files[0];
 									const data = new FormData();
-									data.append('file', file);
+									data.append('file_content', file);
 									data.append('massnahmenZuordnung', massnahme);
 
 									this.uploadNachweis(data);

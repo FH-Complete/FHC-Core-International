@@ -391,7 +391,7 @@ class Studiengangsleitung extends Auth_Controller
 		{
 			$fileName = 'Bestätigung' . '_' . $massnahmeZuordnung->student_uid . '_' .$massnahmeZuordnung->bezeichnung . '.pdf';
 
-			$file = $this->_ci->dmslib->download($massnahmeZuordnung->dms_id, $fileName, 'attachment');
+			$file = $this->_ci->dmslib->getOutputFileInfo($massnahmeZuordnung->dms_id, $fileName);
 
 			$this->outputFile(getData($file));
 		}

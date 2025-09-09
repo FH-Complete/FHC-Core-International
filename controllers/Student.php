@@ -368,16 +368,28 @@ class Student extends Auth_Controller
 
 	private function _uploadFile()
 	{
+		// File upload
+		$upload_data = $this->_ci->dmslib->upload(array('pdf'));
+
+		// If an error occurred while uploading the file
+		if (isError($upload_data)) return $upload_data;
+
 		$file = array(
 			'kategorie_kurzbz' => 'international_nachweis',
 			'version' => 0,
-			'name' => $_FILES['file']['name'],
-			'mimetype' => $_FILES['file']['type'],
+			'name' => $_FILES[DmsLib::FILE_CONTENT_PROPERTY]['name'],
+			'mimetype' => $_FILES[DmsLib::FILE_CONTENT_PROPERTY]['type'],
 			'insertamum' => (new DateTime())->format('Y-m-d H:i:s'),
 			'insertvon' => $this->_uid
 		);
 
-		return $this->_ci->dmslib->upload($file, 'file', array('pdf'));
+		// Add file to the DMS (DB + file system)
+		return $this->_ci->dmslib->add(
+			$_FILES[DmsLib::FILE_CONTENT_PROPERTY]['name'],
+			$_FILES[DmsLib::FILE_CONTENT_PROPERTY]['type'],
+			fopen($upload_data['full_path'], 'r'),
+			'international_nachweis'
+		);
 	}
 
 	public function studentDownloadNachweis()
@@ -389,7 +401,7 @@ class Student extends Auth_Controller
 
 		$massnahmenZuordnung = $this->_checkMassnahmenZuordnung($massnahmenZuordnungGet);
 
-		$file = $this->_ci->dmslib->download($massnahmenZuordnung->dms_id, 'Massnahmenbestaetigung.pdf', 'attachment');
+		$file = $this->_ci->dmslib->getOutputFileInfo($massnahmenZuordnung->dms_id, 'Massnahmenbestaetigung.pdf');
 
 		$this->outputFile(getData($file));
 	}

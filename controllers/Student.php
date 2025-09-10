@@ -309,7 +309,7 @@ class Student extends Auth_Controller
 		if ($massnahme->massnahme_status_kurzbz !== 'accepted')
 			$this->terminateWithJsonError($this->_ci->p->t('ui', 'fehlerBeimSpeichern'));
 
-		$dmsFile = $this->_uploadFile();
+		$dmsFile = $this->_uploadFile('file');
 
 		if (isError($dmsFile))
 			$this->terminateWithJsonError(getError($dmsFile));
@@ -366,18 +366,18 @@ class Student extends Auth_Controller
 		return getData($massnahmenZuordnung)[0];
 	}
 
-	private function _uploadFile()
+	private function _uploadFile($param_name)
 	{
 		// File upload
-		$upload_data = $this->_ci->dmslib->upload(array('pdf'));
+		$upload_data = $this->_ci->dmslib->upload($_FILES[$param_name]['name'], array('pdf'));
 
 		// If an error occurred while uploading the file
 		if (isError($upload_data)) return $upload_data;
 
 		// Add file to the DMS (DB + file system)
 		return $this->_ci->dmslib->add(
-			$_FILES[DmsLib::FILE_CONTENT_PROPERTY]['name'],
-			$_FILES[DmsLib::FILE_CONTENT_PROPERTY]['type'],
+			$_FILES[$param_name]['name'],
+			$_FILES[$param_name]['type'],
 			fopen($upload_data['full_path'], 'r'),
 			'international_nachweis'
 		);

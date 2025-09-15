@@ -36,6 +36,7 @@ class Student extends Auth_Controller
 		);
 
 		$this->load->library('WidgetLib');
+		$this->load->library('AkteLib');
 		$this->load->library('DmsLib');
 		$this->_ci->load->model('extensions/FHC-Core-International/Internatmassnahme_model', 'InternatmassnahmeModel');
 		$this->_ci->load->model('extensions/FHC-Core-International/Internatmassnahmezuordnung_model', 'InternatmassnahmezuordnungModel');
@@ -197,15 +198,15 @@ class Student extends Auth_Controller
 		if (isError($insertStatus))
 			$this->terminateWithJsonError(getError($insertStatus));
 
-		$this->outputJsonSuccess(array
-									(
-										'massnahme_zuordnung_id' => $insert->retval,
-										'bezeichnung' => $massnahme->bezeichnung_mehrsprachig[$this->language],
-										'studiensemester' => $studiensemester->studiensemester_kurzbz,
-										'ects' => $massnahme->ects,
-										'anmerkung' => $anmerkungPost,
-										'massnahme_id' => $massnahme->massnahme_id
-									)
+		$this->outputJsonSuccess(
+			array(
+				'massnahme_zuordnung_id' => $insert->retval,
+				'bezeichnung' => $massnahme->bezeichnung_mehrsprachig[$this->language],
+				'studiensemester' => $studiensemester->studiensemester_kurzbz,
+				'ects' => $massnahme->ects,
+				'anmerkung' => $anmerkungPost,
+				'massnahme_id' => $massnahme->massnahme_id
+			)
 		);
 	}
 
@@ -237,7 +238,7 @@ class Student extends Auth_Controller
 			if (isError($updateZuordnung))
 				$this->terminateWithJsonError(getError($updateZuordnung));
 
-			$deleteFile = $this->_ci->dmslib->delete($massnahmenZuordnung->person_id, $massnahmenZuordnung->dms_id);
+			$deleteFile = $this->_ci->aktelib->removeByPersonIdAndDmsId($massnahmenZuordnung->person_id, $massnahmenZuordnung->dms_id);
 
 			if (isError($deleteFile))
 				$this->terminateWithJsonError(getError($deleteFile));
@@ -286,7 +287,7 @@ class Student extends Auth_Controller
 
 			if (!is_null($massnahmenZuordnung->dms_id))
 			{
-				$deleteFile = $this->_ci->dmslib->delete($massnahmenZuordnung->person_id, $massnahmenZuordnung->dms_id);
+				$deleteFile = $this->_ci->aktelib->removeByPersonIdAndDmsId($massnahmenZuordnung->person_id, $massnahmenZuordnung->dms_id);
 
 				if (isError($deleteFile))
 					$this->terminateWithJsonError(getError($deleteFile));
@@ -309,7 +310,7 @@ class Student extends Auth_Controller
 		if ($massnahme->massnahme_status_kurzbz !== 'accepted')
 			$this->terminateWithJsonError($this->_ci->p->t('ui', 'fehlerBeimSpeichern'));
 
-		$dmsFile = $this->_uploadFile('file');
+		$dmsFile = $this->_uploadFile();
 
 		if (isError($dmsFile))
 			$this->terminateWithJsonError(getError($dmsFile));
@@ -366,20 +367,28 @@ class Student extends Auth_Controller
 		return getData($massnahmenZuordnung)[0];
 	}
 
-	private function _uploadFile($param_name)
+	/**
+	 *
+	 */
+	private function _uploadFile()
 	{
 		// File upload
-		$upload_data = $this->_ci->dmslib->upload($_FILES[$param_name]['name'], array('pdf'));
+		$upload_data = uploadFile(array('pdf'));
 
 		// If an error occurred while uploading the file
 		if (isError($upload_data)) return $upload_data;
 
 		// Add file to the DMS (DB + file system)
 		return $this->_ci->dmslib->add(
-			$_FILES[$param_name]['name'],
-			$_FILES[$param_name]['type'],
+			$upload_data['file_name'],
+			$upload_data['file_type'],
 			fopen($upload_data['full_path'], 'r'),
-			'international_nachweis'
+			'international_nachweis', // kategorie_kurzbz
+			null, // dokument_kurzbz
+			null, // beschreibung
+			null, // cis_suche
+			null, // schlagworte
+			getAuthUID() // insertvon
 		);
 	}
 

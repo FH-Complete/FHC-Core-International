@@ -373,7 +373,7 @@ class Student extends Auth_Controller
 	private function _uploadFile()
 	{
 		// File upload
-		$upload_data = uploadFile(array('pdf'));
+		$upload_data = $this->uploadFile('file', array('pdf'));
 
 		// If an error occurred while uploading the file
 		if (isError($upload_data)) return $upload_data;

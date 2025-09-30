@@ -1,11 +1,9 @@
 import {CoreFilterCmpt} from '../../../../js/components/filter/Filter.js';
-import {CoreRESTClient} from '../../../../js/RESTClient.js';
 import CoreBaseLayout from '../../../../js/components/layout/BaseLayout.js';
 import BsModal from '../../../../js/components/Bootstrap/Modal.js';
 import FormInput from "../../../../js/components/Form/Input.js";
 import Dms from "../../../../js/components/Form/Upload/Dms.js";
-import FhcLoader from '../../../../js/components/Loader.js';
-
+import ApiStudent from '../api/student.js';
 export default {
 	name: 'Student',
 
@@ -25,8 +23,7 @@ export default {
 		CoreBaseLayout,
 		BsModal,
 		FormInput,
-		Dms,
-		FhcLoader
+		Dms
 	},
 	data: function() {
 		return {
@@ -52,16 +49,9 @@ export default {
 		tabulatorOptions() {
 			return {
 				index: 'massnahme_zuordnung_id',
-				ajaxURL: CoreRESTClient._generateRouterURI('/extensions/FHC-Core-International/Student/getData'),
-				ajaxResponse: (url, params, response)=>  {
-					if (CoreRESTClient.isSuccess(response))
-					{
-						if (CoreRESTClient.hasData(response))
-							return CoreRESTClient.getData(response).retval;
-						else
-							return [];
-					}
-				},
+				ajaxURL: 'dummy',
+				ajaxRequestFunc: () => this.$api.call(ApiStudent.getData()),
+				ajaxResponse: (url, params, response) => { return response.data || [] },
 				maxHeight: "100%",
 				layout: 'fitDataStretch',
 				selectable: false,
@@ -232,7 +222,7 @@ export default {
 								const downloadButton = document.createElement('button');
 								downloadButton.className = 'btn btn';
 								downloadButton.innerHTML = "<i class='fa-solid fa-download' aria-hidden = 'true'></i>";
-								downloadButton.addEventListener('click', () => window.location.href = CoreRESTClient._generateRouterURI('extensions/FHC-Core-International/Student/studentDownloadNachweis?massnahmenZuordnung=' + massnahme));
+								downloadButton.addEventListener('click', () => window.location.href = this.$api.getUri(ApiStudent.getNachweis(massnahme)));
 
 								div.appendChild(downloadButton);
 
@@ -308,7 +298,7 @@ export default {
 			);
 
 		},
-		load: function()
+		/*load: function()
 		{
 			Vue.$fhcapi.Student.getData().then(response => {
 
@@ -317,7 +307,7 @@ export default {
 					this.$refs.massnahmenStudentTable.tabulator.setData(CoreRESTClient.getData(response.data).retval);
 				}
 			});
-		},
+		},*/
 		_addButton: function(icon, title)
 		{
 			let button = document.createElement('button');
@@ -328,38 +318,31 @@ export default {
 		},
 		uploadNachweis: function(data)
 		{
-			this.$refs.loader.show();
-			Vue.$fhcapi.Student.uploadNachweis(data).then(response => {
-				if (CoreRESTClient.isSuccess(response.data))
-				{
-					let data = CoreRESTClient.getData(response.data)
+			this.$api.call(ApiStudent.uploadNachweis(data))
+				.then(response => response.data)
+				.then(response => {
 					this.$refs.massnahmenStudentTable.tabulator.updateRow(
-						data.massnahme,
+						response.massnahme,
 						{
-							'dms_id' : data.dms_id,
+							'dms_id' : response.dms_id,
 							'massnahme_status_kurzbz': 'performed'
 						}
 					).then(() => this.setOrder());
-				}
-			}).finally(() => {
-				this.$refs.loader.hide();
-			});
+				});
 		},
 		deleteNachweis: function(data)
 		{
-			Vue.$fhcapi.Student.deleteNachweis(data).then(response => {
-				if (CoreRESTClient.isSuccess(response.data))
-				{
-					let data = CoreRESTClient.getData(response.data)
+			this.$api.call(ApiStudent.deleteNachweis(data))
+				.then(response => response.data)
+				.then(response => {
 					this.$refs.massnahmenStudentTable.tabulator.updateRow(
-						data,
+						response,
 						{
 							'dms_id' : null,
 							'massnahme_status_kurzbz': 'accepted'
 						},
 					).then(() => this.setOrder());
-				}
-			});
+				});
 		},
 		reset: function()
 		{
@@ -373,29 +356,27 @@ export default {
 		},
 		addMassnahme()
 		{
-			Vue.$fhcapi.Student.addMassnahme(this.formData).then(response => {
-				if (CoreRESTClient.isSuccess(response.data))
-				{
-					let data = CoreRESTClient.getData(response.data);
+			this.$api.call(ApiStudent.addMassnahme(this.formData))
+				.then(response => response.data)
+				.then(response => {
 
 					this.$refs.massnahmenStudentTable.tabulator.addRow({
-						massnahme_zuordnung_id: data.massnahme_zuordnung_id,
-						bezeichnung: data.bezeichnung,
+						massnahme_zuordnung_id: response.massnahme_zuordnung_id,
+						bezeichnung: response.bezeichnung,
 						massnahme_status_kurzbz: 'planned',
 						dms_id: null,
-						studiensemester_kurzbz: data.studiensemester,
-						ects: data.ects,
-						massnahme_id: data.massnahme_id,
+						studiensemester_kurzbz: response.studiensemester,
+						ects: response.ects,
+						massnahme_id: response.massnahme_id,
 						status: 'planned',
-						anmerkung: data.anmerkung
+						anmerkung: response.anmerkung
 					}, true);
 
 					this.reset();
 					this.$refs.addMassnahmeModel.hide();
-				}
-			}).then(() => {
-				this.setOrder()
-			});
+				}).then(() => {
+					this.setOrder()
+				});
 		},
 		async deleteStudentMassnahme (cell)
 		{
@@ -408,13 +389,11 @@ export default {
 				'massnahmenZuordnung' : cell.getData().massnahme_zuordnung_id
 			}
 
-			Vue.$fhcapi.Student.deleteMassnahme(data).then(response => {
-				if (CoreRESTClient.isSuccess(response.data))
-				{
-					let data = CoreRESTClient.getData(response.data)
-					this.$refs.massnahmenStudentTable.tabulator.deleteRow(data.massnahme_zuordnung_id)
-				}
-			});
+			this.$api.call(ApiStudent.deleteMassnahme(data))
+				.then(response => response.data)
+				.then(response => {
+					this.$refs.massnahmenStudentTable.tabulator.deleteRow(response.massnahme_zuordnung_id)
+				});
 		},
 		showInfoText()
 		{
@@ -550,6 +529,5 @@ export default {
 			</bs-modal>
 		</template>
 	</core-base-layout>
-	<fhc-loader ref="loader" :timeout="0"></fhc-loader>
 	`
 };

@@ -1,8 +1,9 @@
 import {CoreFilterCmpt} from '../../../../js/components/filter/Filter.js';
-import {CoreRESTClient} from '../../../../js/RESTClient.js';
 import CoreBaseLayout from '../../../../js/components/layout/BaseLayout.js';
 import BsModal from '../../../../js/components/Bootstrap/Modal.js';
 import FormInput from "../../../../js/components/Form/Input.js";
+import ApiMassnahme from '../api/massnahme.js';
+
 
 export default {
 	name: 'Massnahmen',
@@ -34,16 +35,9 @@ export default {
 		tabulatorOptions() {
 			return {
 				index: 'massnahme_id',
-				ajaxURL: CoreRESTClient._generateRouterURI('/extensions/FHC-Core-International/Massnahmen/load'),
-				ajaxResponse: (url, params, response)=>  {
-					if (CoreRESTClient.isSuccess(response))
-					{
-						if (CoreRESTClient.hasData(response))
-							return CoreRESTClient.getData(response);
-						else
-							return [];
-					}
-				},
+				ajaxURL: 'dummy',
+				ajaxRequestFunc: () => this.$api.call(ApiMassnahme.getLoad()),
+				ajaxResponse: (url, params, response) => { return response.data || [] },
 				height: "50%",
 				layout: "fitColumns",
 				persistantLayout: false,
@@ -132,41 +126,37 @@ export default {
 				massnahme_id: this.formData.massnahme_id
 			}
 
-			Vue.$fhcapi.Massnahme.deleteMassnahme(data).then(response => {
-				if (CoreRESTClient.isSuccess(response.data))
-				{
+			this.$api.call(ApiMassnahme.deleteMassnahme(data))
+				.then(response => response.data)
+				.then(response => {
 					this.$fhcAlert.alertSuccess("Erfolgreich gelöscht");
 					this.$refs.massnahmeTable.tabulator.deleteRow(this.formData.massnahme_id);
 					this.$refs.showMassnahmeModal.hide();
 					this.reset();
-				}
-				else
-				{
-					this.$fhcAlert.alertWarning(response.data.retval);
-				}
-
-			});
+				})
+				.catch(error => {
+					this.$fhcAlert.handleSystemError(error);
+				});
 		},
 		save()
 		{
-			Vue.$fhcapi.Massnahme.handleSave(this.formData).then(response => {
-				if (CoreRESTClient.isSuccess(response.data))
-				{
+			this.$api.call(ApiMassnahme.handleSave(this.formData))
+				.then(response => response.data)
+				.then(response => {
 					this.$fhcAlert.alertSuccess("Erfolgreich gespeichert");
 					if (this.formData.massnahme_id === null)
 					{
-						let newMassnahme = CoreRESTClient.getData(response.data).retval[0];
 						this.$refs.massnahmeTable.tabulator.addRow(
 							{
-								ects: newMassnahme.ects,
-								massnahme_id: newMassnahme.massnahme_id,
-								aktiv: newMassnahme.aktiv,
-								bezeichnungshow: newMassnahme.bezeichnungshow,
-								beschreibungshow: newMassnahme.beschreibungshow,
-								bezeichnung: newMassnahme.bezeichnung,
-								bezeichnungeng: newMassnahme.bezeichnungeng,
-								beschreibung: newMassnahme.beschreibung,
-								beschreibungeng: newMassnahme.beschreibungeng,
+								ects: response.ects,
+								massnahme_id: response.massnahme_id,
+								aktiv: response.aktiv,
+								bezeichnungshow: response.bezeichnungshow,
+								beschreibungshow: response.beschreibungshow,
+								bezeichnung: response.bezeichnung,
+								bezeichnungeng: response.bezeichnungeng,
+								beschreibung: response.beschreibung,
+								beschreibungeng: response.beschreibungeng,
 							}
 						)
 					}
@@ -177,15 +167,14 @@ export default {
 							this.formData
 						)
 					}
+				})
+				.catch(error => {
+					this.$fhcAlert.handleSystemError(error);
+				})
+				.finally(() => {
 					this.$refs.showMassnahmeModal.hide();
 					this.reset();
-				}
-				else
-				{
-					this.$fhcAlert.alertWarning(response.data.retval);
-				}
-
-			});
+				});
 		}
 	},
 	template: `

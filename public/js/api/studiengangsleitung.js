@@ -1,52 +1,72 @@
-import {CoreRESTClient} from "../../../../../public/js/RESTClient.js";
 
 export default {
+
+	//nicht im API Controller - da nur JSON als return Wert
+	getDownloadLink(massnahme)
+	{
+		return ('extensions/FHC-Core-International/Studiengangsleitung/download?massnahme=' + encodeURIComponent(massnahme));
+	},
+	getLoad(stg)
+	{
+		return {
+			method: 'get',
+			url: `extensions/FHC-Core-International/components/api/fronted/v1/Studiengangsleitung/load/${encodeURIComponent(stg)}`
+		};
+	},
+	getStudents(data)
+	{
+		return {
+			method: 'get',
+			url: 'extensions/FHC-Core-International/components/api/fronted/v1/Studiengangsleitung/getStudents/',
+			params: data
+		};
+	},
+
+	getOrgForms(data)
+	{
+		return {
+			method: 'get',
+			url: `extensions/FHC-Core-International/components/api/fronted/v1/Studiengangsleitung/getOrgForms/${encodeURIComponent(data.stg)}/${encodeURIComponent(data.stsem)}`
+		};
+	},
+
+	getLvs(data)
+	{
+		return {
+			method: 'get',
+			url: `extensions/FHC-Core-International/components/api/fronted/v1/Studiengangsleitung/getLVs/${encodeURIComponent(data.stg)}/${encodeURIComponent(data.stsem)}`
+		};
+	},
+
+	loadBenotung(data)
+	{
+		return {
+			method: 'get',
+			url: `extensions/FHC-Core-International/components/api/fronted/v1/Studiengangsleitung/loadBenotungen/${encodeURIComponent(data.stg)}/${encodeURIComponent(data.stsem)}`,
+		}
+	},
+
 	setStatus(data)
 	{
-		try {
-			return CoreRESTClient.post('/extensions/FHC-Core-International/Studiengangsleitung/setStatus', data);
-		} catch (error) {
-			throw error;
+		return {
+			method: 'post',
+			url: 'extensions/FHC-Core-International/components/api/fronted/v1/Studiengangsleitung/addStatus/',
+			params: data
 		}
 	},
 	setNote(data)
 	{
-		try {
-			return CoreRESTClient.post('/extensions/FHC-Core-International/Studiengangsleitung/setNote', data);
-		} catch (error) {
-			throw error;
+		return {
+			method: 'post',
+			url: 'extensions/FHC-Core-International/components/api/fronted/v1/Studiengangsleitung/setNote/',
+			params: data
 		}
 	},
-	getStudents(data)
-	{
-		try {
-			return CoreRESTClient.get('extensions/FHC-Core-International/Studiengangsleitung/getStudents', data);
-		} catch (error) {
-			throw error;
-		}
-	},
-	loadBenotung(data)
-	{
-		try {
-			return CoreRESTClient.get('extensions/FHC-Core-International/Studiengangsleitung/loadBenotungen', data);
-		} catch (error) {
-			throw error;
-		}
-	},
-	getLvs(data)
-	{
-		try {
-			return CoreRESTClient.get('extensions/FHC-Core-International/Studiengangsleitung/getLVs', data);
-		} catch (error) {
-			throw error;
-		}
-	},
-	getOrgForms(data)
-	{
-		try {
-			return CoreRESTClient.get('extensions/FHC-Core-International/Studiengangsleitung/getOrgForms', data);
-		} catch (error) {
-			throw error;
-		}
-	}
+
+
+
+
+
+
+
 };

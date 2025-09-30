@@ -1,9 +1,9 @@
 import {CoreFilterCmpt} from '../../../../js/components/filter/Filter.js';
-import {CoreRESTClient} from '../../../../js/RESTClient.js';
 import CoreBaseLayout from '../../../../js/components/layout/BaseLayout.js';
 import BsModal from '../../../../js/components/Bootstrap/Modal.js';
 import FormInput from "../../../../js/components/Form/Input.js";
 import FhcLoader from '../../../../js/components/Loader.js';
+import ApiStudiengangsleitung from '../api/studiengangsleitung.js';
 
 export default {
 	name: 'Studiengangsleitung',
@@ -97,19 +97,14 @@ export default {
 		tabulatorOptions() {
 			return {
 				index: 'massnahme_zuordnung_id',
-				ajaxURL: CoreRESTClient._generateRouterURI('/extensions/FHC-Core-International/Studiengangsleitung/load'),
-				ajaxParams: () => {
-					return {stg: this.selectedStg};
-				},
-				ajaxResponse: (url, params, response)=>  {
-					if (CoreRESTClient.isSuccess(response))
-					{
-						if (CoreRESTClient.hasData(response))
-							return CoreRESTClient.getData(response).retval;
-						else
-							return [];
+				ajaxURL: 'dummy',
+				ajaxRequestFunc: () => {
+					if (!this.selectedStg) {
+						return Promise.resolve([]);
 					}
+					return this.$api.call(ApiStudiengangsleitung.getLoad(this.selectedStg));
 				},
+				ajaxResponse: (url, params, response) => { return response.data || [] },
 				height: '65vh',
 				maxHeight: "100%",
 				layout: 'fitDataStretch',
@@ -243,7 +238,7 @@ export default {
 								downloadNachweis.title = this.$p.t("international", "downloadBestaetigung");
 								downloadNachweis.className = 'btn';
 								downloadNachweis.innerHTML = "<i class='fa fa-download fa-1x' aria-hidden = 'true' ></i >";
-								downloadNachweis.addEventListener('click', () => window.location.href = CoreRESTClient._generateRouterURI('extensions/FHC-Core-International/Studiengangsleitung/download?massnahme=' + massnahme));
+								downloadNachweis.addEventListener('click', () => window.location.href = this.$api.getUri(ApiStudiengangsleitung.getDownloadLink(massnahme)));
 
 								div.append(downloadNachweis);
 
@@ -435,61 +430,56 @@ export default {
 		},
 		setStatusMulti (data, rows)
 		{
-			Vue.$fhcapi.Studiengangsleitung.setStatus(data).then(response => {
-				if (CoreRESTClient.isSuccess(response.data))
-				{
-					let data = CoreRESTClient.getData(response.data)
+			this.$api.call(ApiStudiengangsleitung.setStatus(data))
+				.then(response => response.data)
+				.then(response => {
 					rows.forEach((row) => {
 						row.update(
 							{
-								'massnahme_status_kurzbz' : data.statusKurz,
-								'akzeptieren': data.statusKurz,
-								'massnahme_akzeptieren': data.statusKurz,
-								'status_bezeichnung' : data.status_bezeichnung
+								'massnahme_status_kurzbz' : response.statusKurz,
+								'akzeptieren': response.statusKurz,
+								'massnahme_akzeptieren': response.statusKurz,
+								'status_bezeichnung' : response.status_bezeichnung
 							}
 						)
 					});
 					this.$refs.massnahmenTable.tabulator.rowManager.refreshActiveData();
 					this.$refs.massnahmenTable.tabulator.deselectRow();
 					this.$fhcAlert.alertSuccess("Erfolgreich gesetzt");
-				}
-			});
+				});
 		},
 		setStatus (rowData)
 		{
-			Vue.$fhcapi.Studiengangsleitung.setStatus(rowData).then(response => {
-				if (CoreRESTClient.isSuccess(response.data))
-				{
-					let data = CoreRESTClient.getData(response.data)
+			this.$api.call(ApiStudiengangsleitung.setStatus(rowData))
+				.then(response => response.data)
+				.then(response => {
 					this.$refs.massnahmenTable.tabulator.updateRow(
-						data.massnahme,
+						response.massnahme,
 						{
-							'massnahme_status_kurzbz' : data.status,
-							'document' : data.dms_id,
-							'status_bezeichnung' : data.status_bezeichnung,
-							'akzeptieren': data.status,
-							'massnahme_akzeptieren': data.status,
-							'anmerkung_stgl' : data.anmerkung_stgl
+							'massnahme_status_kurzbz' : response.status,
+							'document' : response.dms_id,
+							'status_bezeichnung' : response.status_bezeichnung,
+							'akzeptieren': response.status,
+							'massnahme_akzeptieren': response.status,
+							'anmerkung_stgl' : response.anmerkung_stgl
 						},
 					).then(() => {
 						this.$refs.massnahmenTable.tabulator.rowManager.refreshActiveData();
 						this.$refs.absageModal.hide()
 						this.$refs.massnahmenTable.tabulator.deselectRow()
 					});
-				}
 			});
 		},
 		getStudents(data)
 		{
-			Vue.$fhcapi.Studiengangsleitung.getStudents(data).then(response => {
-				if (CoreRESTClient.isSuccess(response.data))
-				{
-					if (CoreRESTClient.hasData(response.data))
-						this._setFilter(CoreRESTClient.getData(response.data));
+			this.$api.call(ApiStudiengangsleitung.getStudents(data))
+				.then(response => response.data)
+				.then(response => {
+					if (response.length > 0)
+						this._setFilter(response);
 					else
 						this._setFilter(['']);
-				}
-			});
+				});
 		},
 		_setFilter(uids)
 		{
@@ -614,24 +604,26 @@ export default {
 		},
 		async loadBenotung(data)
 		{
-			await Vue.$fhcapi.Studiengangsleitung.loadBenotung(data).then(response => {
-				if (CoreRESTClient.isSuccess(response.data))
-				{
-					if (CoreRESTClient.hasData(response.data))
-					{
-						let responseData = CoreRESTClient.getData(response.data);
-						this.filteredUids = responseData.map(function(obj) {
-							return obj['student_uid'];
-						});
-						this._setNotenFilter(this.filteredUids);
-					}
-					else
+
+			await this.$api.call(ApiStudiengangsleitung.loadBenotung(data))
+				.then(response => response.data)
+				.then(response => {
+					if (response.length === 0)
 					{
 						this._setNotenFilter(['']);
 						this.filteredUids = [''];
 					}
-				}
-			});
+					else
+					{
+						this.filteredUids = response.map(function(obj) {
+							return obj['student_uid'];
+						});
+						this._setNotenFilter(this.filteredUids);
+					}
+				})
+				.catch(error => {
+					this.$fhcAlert.handleSystemError(error);
+				});
 		},
 		closeNotenUebernahme()
 		{
@@ -651,12 +643,19 @@ export default {
 		},
 		async getOrgForms(data)
 		{
-			await Vue.$fhcapi.Studiengangsleitung.getOrgForms(data).then(response => {
-				if (CoreRESTClient.isSuccess(response.data))
-				{
-					if (CoreRESTClient.hasData(response.data))
+			await this.$api.call(ApiStudiengangsleitung.getOrgForms(data))
+				.then(response => response.data)
+				.then(response => {
+					if (response.length === 0)
 					{
-						this.orgformen = CoreRESTClient.getData(response.data)
+						this.orgformen = [];
+						this.selectedOrgform = "";
+						this.selectedLv = '';
+						this.filteredLvs = [];
+					}
+					else
+					{
+						this.orgformen = response;
 						if (this.orgformen.length === 1)
 							this.selectedOrgform = this.orgformen[0].orgform_kurzbz;
 						else
@@ -664,39 +663,21 @@ export default {
 							this.selectedOrgform = "";
 						}
 					}
-					else
-					{
-						this.orgformen = [];
-						this.selectedOrgform = "";
-						this.selectedLv = '';
-						this.filteredLvs = [];
-					}
-				}
-				else
-				{
-					this.orgformen = [];
-					this.selectedOrgform = "";
-					this.selectedLv = '';
-					this.filteredLvs = [];
-				}
-			})
+				})
+				.catch(error => {
+					this.$fhcAlert.handleSystemError(error);
+				});
 		},
 		async getLVs(data)
 		{
-			await Vue.$fhcapi.Studiengangsleitung.getLvs(data).then(response => {
-				if (CoreRESTClient.isSuccess(response.data))
-				{
-					if (CoreRESTClient.hasData(response.data))
-						this.filteredLvs = CoreRESTClient.getData(response.data)
-					else
-						this.filteredLvs = [];
-				}
-				else
-				{
-					this.filteredLvs = [];
-					this.selectedLv = '';
-				}
-			}).then(() => this.filterLVsDropdown());
+			await this.$api.call(ApiStudiengangsleitung.getLvs(data))
+				.then(response => response.data)
+				.then(response => {
+					this.filteredLvs = response;
+				}).then(() => this.filterLVsDropdown())
+				.catch(error => {
+					this.$fhcAlert.handleSystemError(error);
+				});
 		},
 		filterLVsDropdown()
 		{
@@ -748,18 +729,16 @@ export default {
 		},
 		setNote(changedData) {
 			this.$refs.loader.show();
-			Vue.$fhcapi.Studiengangsleitung.setNote(changedData).then(response => {
-				if (CoreRESTClient.isSuccess(response.data))
-				{
-					let responseData = (CoreRESTClient.getData(response.data));
-
-					if (responseData.count === 0)
+			this.$api.call(ApiStudiengangsleitung.setNote(changedData))
+				.then(response => response.data)
+				.then(response => {
+					if (response.length === 0 || response.count === 0)
 					{
 						this.$fhcAlert.alertWarning("Es wurde bei keiner Person eine Note eingetragen!");
 					}
 					else
 					{
-						responseData.students.forEach(item => {
+						response.students.forEach(item => {
 							this.$refs.massnahmenTable.tabulator.getRows().forEach(row => {
 								const rowData = row.getData();
 								if (rowData.student_uid === item) {
@@ -772,19 +751,14 @@ export default {
 
 						});
 
-						let person = responseData.count === 1 ? 'Person' : 'Personen';
-						this.$fhcAlert.alertSuccess(`Es wurde bei ${responseData.count} ${person} eine Note eingetragen!`);
+						let person = response.count === 1 ? 'Person' : 'Personen';
+						this.$fhcAlert.alertSuccess(`Es wurde bei ${response.count} ${person} eine Note eingetragen!`);
 					}
-				}
-				else
-				{
-					this.$fhcAlert.alertWarning(CoreRESTClient.getError(response.data));
-				}
-			}).catch(error => {
-				this.$fhcAlert.alertWarning(this.$p.t('ui/fehlerBeimSpeichern'));
-			}) .finally(() => {
-				this.$refs.loader.hide();
-			});
+				}).catch(error => {
+					this.$fhcAlert.alertWarning(error);
+				}) .finally(() => {
+					this.$refs.loader.hide();
+				});
 		},
 		collapseGroup()
 		{
@@ -931,7 +905,7 @@ export default {
 				@nw-new-entry="newSideMenuEntryHandler"
 				:table-only=true
 			>
-				
+
 			</core-filter-cmpt>
 			
 			<bs-modal ref="absageModal" class="bootstrap-prompt" dialogClass="modal-lg" @hidden-bs-modal="reset">

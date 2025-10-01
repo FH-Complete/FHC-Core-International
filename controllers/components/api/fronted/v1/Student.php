@@ -99,6 +99,16 @@ class Student extends FHCAPI_Controller
 
 		$studiensemester = getData($studiensemester)[0];
 
+		if ($massnahme->einmalig)
+		{
+			$already_exists = $this->_ci->InternatmassnahmezuordnungModel->checkIfExists($student->prestudent_id, $massnahme->massnahme_id);
+
+			if (hasData($already_exists))
+			{
+				$this->terminateWithError($this->_ci->p->t('international', 'erroreinmalig'), self::ERROR_TYPE_GENERAL);
+			}
+		}
+
 		$insert = $this->_ci->InternatmassnahmezuordnungModel->insert(
 			array(
 				'prestudent_id' => $student->prestudent_id,

@@ -22,6 +22,7 @@ export default {
 				beschreibung: null,
 				beschreibungeng: null,
 				aktiv: null,
+				einmalig: null,
 				ects: null,
 				massnahme_id: null
 			},
@@ -100,6 +101,7 @@ export default {
 			this.formData.beschreibung = massnahme.beschreibung;
 			this.formData.beschreibungeng = massnahme.beschreibungeng;
 			this.formData.aktiv = massnahme.aktiv;
+			this.formData.einmalig = massnahme.einmalig;
 			this.formData.ects = massnahme.ects;
 			this.formData.massnahme_id = massnahme.massnahme_id;
 			this.$refs.showMassnahmeModal.show();
@@ -117,6 +119,7 @@ export default {
 			this.formData.beschreibung = null;
 			this.formData.beschreibungeng = null;
 			this.formData.aktiv = null;
+			this.formData.einmalig = null;
 			this.formData.ects = null;
 			this.formData.massnahme_id = null;
 		},
@@ -151,6 +154,7 @@ export default {
 								ects: response.ects,
 								massnahme_id: response.massnahme_id,
 								aktiv: response.aktiv,
+								einmalig: response.einmalig,
 								bezeichnungshow: response.bezeichnungshow,
 								beschreibungshow: response.beschreibungshow,
 								bezeichnung: response.bezeichnung,
@@ -247,8 +251,14 @@ export default {
 							<form-input
 								type="checkbox"
 								v-model="formData.aktiv"
-								name="ects"
+								name="aktiv"
 								:label="$p.t('global', 'aktiv')"
+							/>
+							<form-input
+								type="checkbox"
+								v-model="formData.einmalig"
+								name="einmalig"
+								:label="$p.t('international', 'einmalig')"
 							/>
 						</div>
 					</div>

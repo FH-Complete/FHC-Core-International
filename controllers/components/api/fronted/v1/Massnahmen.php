@@ -53,7 +53,8 @@ class Massnahmen extends FHCAPI_Controller
 			beschreibung_mehrsprachig[(1)] as beschreibung,
 			beschreibung_mehrsprachig[(2)] as beschreibungeng,
 			ects,
-			aktiv'
+			aktiv,
+			einmalig'
 		);
 
 		$this->_ci->InternatmassnahmeModel->addOrder('aktiv, ects', 'DESC');
@@ -77,6 +78,7 @@ class Massnahmen extends FHCAPI_Controller
 		$beschreibung = $postJson['beschreibung'];
 		$beschreibungeng = $postJson['beschreibungeng'];
 		$aktiv = $postJson['aktiv'];
+		$einmalig = $postJson['einmalig'];
 
 		if (isEmptyString($bezeichnung) || isEmptyString($bezeichnungeng) || isEmptyString($ects)
 			|| isEmptyString($beschreibung) || isEmptyString($beschreibungeng))
@@ -98,6 +100,7 @@ class Massnahmen extends FHCAPI_Controller
 				'beschreibung_mehrsprachig' => $beschreibungmehrsprachig,
 				'ects' => $ects,
 				'aktiv' => !is_null($aktiv),
+				'einmalig' => !is_null($einmalig),
 				'insertamum' => date('Y-m-d H:i:s'),
 				'insertvon' => $this->_uid
 			)
@@ -120,7 +123,8 @@ class Massnahmen extends FHCAPI_Controller
 			beschreibung_mehrsprachig[(1)] as beschreibung,
 			beschreibung_mehrsprachig[(2)] as beschreibungeng,
 			ects,
-			aktiv'
+			aktiv,
+			einmalig'
 		);
 
 		$result = $this->_ci->InternatmassnahmeModel->loadWhere(array('massnahme_id' =>  $insert->retval));
@@ -136,6 +140,7 @@ class Massnahmen extends FHCAPI_Controller
 		$beschreibung = $postJson['beschreibung'];
 		$beschreibungeng = $postJson['beschreibungeng'];
 		$aktiv = $postJson['aktiv'];
+		$einmalig = $postJson['einmalig'];
 
 		if (isEmptyString($bezeichnung) || isEmptyString($bezeichnungeng) || isEmptyString($ects)
 			|| isEmptyString($beschreibung) || isEmptyString($beschreibungeng))
@@ -159,6 +164,7 @@ class Massnahmen extends FHCAPI_Controller
 				'beschreibung_mehrsprachig' => $beschreibungmehrsprachig,
 				'ects' => $ects,
 				'aktiv' => $aktiv,
+				'einmalig' => $einmalig,
 				'updateamum' => date('Y-m-d H:i:s'),
 				'updatevon' => $this->_uid
 			)

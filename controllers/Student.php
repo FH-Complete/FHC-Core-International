@@ -59,6 +59,7 @@ class Student extends Auth_Controller
 		$this->_ci->InternatmassnahmeModel->addOrder('ects');
 		$this->_ci->InternatmassnahmeModel->addSelect('massnahme_id,
 														ects,
+														einmalig,
 														array_to_json(bezeichnung_mehrsprachig::varchar[])->>'.$this->language.' as bezeichnung,
 														array_to_json(beschreibung_mehrsprachig::varchar[])->>'.$this->language.' as beschreibung');
 		$massnahmen = $this->_ci->InternatmassnahmeModel->loadWhere(array('aktiv' => true));

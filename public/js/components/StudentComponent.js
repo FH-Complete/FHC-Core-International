@@ -270,6 +270,11 @@ export default {
 				persistenceID: "15.04.2025",
 			}
 		},
+		isEinmalig() {
+			return (
+				this.formData.massnahme && this.formData.massnahme.einmalig === true
+			)
+		}
 
 	},
 	async created() {
@@ -481,6 +486,13 @@ export default {
 			<bs-modal ref="addMassnahmeModel" class="bootstrap-prompt" dialogClass="modal-xl" @hidden-bs-modal="reset">
 				<template #title>{{ $p.t('international', 'addMassnahme') }}</template>
 				<template #default>
+				<div class="massnahme-div">
+					<p
+						v-if="isEinmalig"
+						class="einmalig-info-text alert alert-warning"
+					>
+						{{$p.t('international', 'massnahmeneinmalig')}}
+					</p>
 					<div class="row row-cols-2">
 						<div class="col">
 							<form-input
@@ -522,6 +534,7 @@ export default {
 							</form-input>
 						</div>
 					</div>
+				</div>
 				</template>
 				<template #footer>
 					<button type="button" class="btn btn-primary" @click="addMassnahme">{{$p.t('ui', 'speichern')}}</button>

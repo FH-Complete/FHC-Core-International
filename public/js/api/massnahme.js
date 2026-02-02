@@ -1,4 +1,4 @@
-import {CoreRESTClient} from "../../../../../public/js/RESTClient.js";
+import {CoreRESTClient} from "../../../../js/RESTClient.js";
 
 export default {
 	handleSave(data)

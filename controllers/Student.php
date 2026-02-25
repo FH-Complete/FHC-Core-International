@@ -109,7 +109,9 @@ class Student extends Auth_Controller
 
 		$diff = $maxsemester - $ausbildungssemester;
 
-		$aktSemester = $this->_ci->StudiensemesterModel->getAktOrNextSemester();
+		$aktSemester = $this->_ci->StudiensemesterModel->getAkt();
+		if (!hasData($aktSemester))
+			$aktSemester = $this->_ci->StudiensemesterModel->getNext();
 		$this->_ci->StudiensemesterModel->addLimit($diff + 1);
 		$this->_ci->StudiensemesterModel->addOrder('start');
 		$studiensemester = $this->_ci->StudiensemesterModel->loadWhere(array('start >=' => getData($aktSemester)[0]->start));

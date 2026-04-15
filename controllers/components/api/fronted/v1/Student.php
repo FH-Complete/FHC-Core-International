@@ -79,6 +79,21 @@ class Student extends FHCAPI_Controller
 
 		$student = getData($student)[0];
 
+		$this->_ci->InternatmassnahmeModel->db->group_start();
+		$this->_ci->InternatmassnahmeModel->db->where('gueltig_von <=', date('Y-m-d'));
+		$this->_ci->InternatmassnahmeModel->db->or_where('gueltig_von IS NULL');
+		$this->_ci->InternatmassnahmeModel->db->group_end();
+
+		$this->_ci->InternatmassnahmeModel->db->group_start();
+		$this->_ci->InternatmassnahmeModel->db->where('gueltig_bis >=', date('Y-m-d'));
+		$this->_ci->InternatmassnahmeModel->db->or_where('gueltig_bis IS NULL');
+		$this->_ci->InternatmassnahmeModel->db->group_end();
+
+		if (isset($this->_ci->config->item('stg_massnahmen_blacklist')[$student->studiengang_kz]))
+		{
+			$this->_ci->InternatmassnahmeModel->db->where_not_in('massnahme_id', $this->_ci->config->item('stg_massnahmen_blacklist')[$student->studiengang_kz]);
+		}
+
 		$massnahme = $this->_ci->InternatmassnahmeModel->loadWhere(array('massnahme_id' => $massnahmePost, 'aktiv' => true));
 
 		if (isError($massnahme))

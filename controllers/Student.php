@@ -62,6 +62,22 @@ class Student extends Auth_Controller
 														einmalig,
 														array_to_json(bezeichnung_mehrsprachig::varchar[])->>'.$this->language.' as bezeichnung,
 														array_to_json(beschreibung_mehrsprachig::varchar[])->>'.$this->language.' as beschreibung');
+
+		$this->_ci->InternatmassnahmeModel->db->group_start();
+		$this->_ci->InternatmassnahmeModel->db->where('gueltig_von <=', date('Y-m-d'));
+		$this->_ci->InternatmassnahmeModel->db->or_where('gueltig_von IS NULL');
+		$this->_ci->InternatmassnahmeModel->db->group_end();
+
+		$this->_ci->InternatmassnahmeModel->db->group_start();
+		$this->_ci->InternatmassnahmeModel->db->where('gueltig_bis >=', date('Y-m-d'));
+		$this->_ci->InternatmassnahmeModel->db->or_where('gueltig_bis IS NULL');
+		$this->_ci->InternatmassnahmeModel->db->group_end();
+
+		if (isset($this->_ci->config->item('stg_massnahmen_blacklist')[$student->studiengang_kz]))
+		{
+			$this->_ci->InternatmassnahmeModel->db->where_not_in('massnahme_id', $this->_ci->config->item('stg_massnahmen_blacklist')[$student->studiengang_kz]);
+		}
+
 		$massnahmen = $this->_ci->InternatmassnahmeModel->loadWhere(array('aktiv' => true));
 
 		if (isError($massnahmen))

@@ -24,7 +24,9 @@ export default {
 				aktiv: null,
 				einmalig: null,
 				ects: null,
-				massnahme_id: null
+				massnahme_id: null,
+				gueltig_von: null,
+				gueltig_bis: null
 			},
 			editMode: null,
 			phrasesLoaded: null,
@@ -55,6 +57,28 @@ export default {
 					{title: 'Bezeichnung', field: 'bezeichnungshow'},
 					{title: 'Beschreibung', field: 'beschreibungshow'},
 					{title: 'International Credits', field: 'ects'},
+					{title: 'Gültig von', field: 'gueltig_von', visible: false, formatter: function (cell) {
+							const dateStr = cell.getValue();
+							if (!dateStr) return "";
+
+							const date = new Date(dateStr);
+							return date.toLocaleString("de-DE", {
+								day: "2-digit",
+								month: "2-digit",
+								year: "numeric",
+							});
+						}},
+					{title: 'Gültig bis', field: 'gueltig_bis', visible: false, formatter: function (cell) {
+							const dateStr = cell.getValue();
+							if (!dateStr) return "";
+
+							const date = new Date(dateStr);
+							return date.toLocaleString("de-DE", {
+								day: "2-digit",
+								month: "2-digit",
+								year: "numeric",
+							});
+						}},
 					{
 						title: 'Aktiv',
 						field: 'aktiv',
@@ -104,6 +128,8 @@ export default {
 			this.formData.einmalig = massnahme.einmalig;
 			this.formData.ects = massnahme.ects;
 			this.formData.massnahme_id = massnahme.massnahme_id;
+			this.formData.gueltig_von = massnahme.gueltig_von;
+			this.formData.gueltig_bis = massnahme.gueltig_bis;
 			this.$refs.showMassnahmeModal.show();
 		},
 		showMassnahmeContainer()
@@ -122,6 +148,8 @@ export default {
 			this.formData.einmalig = null;
 			this.formData.ects = null;
 			this.formData.massnahme_id = null;
+			this.formData.gueltig_von = null;
+			this.formData.gueltig_bis = null;
 		},
 		remove()
 		{
@@ -161,6 +189,8 @@ export default {
 								bezeichnungeng: response.bezeichnungeng,
 								beschreibung: response.beschreibung,
 								beschreibungeng: response.beschreibungeng,
+								gueltig_von: response.gueltig_von,
+								gueltig_bis: response.gueltig_bis,
 							}
 						)
 					}
@@ -248,6 +278,28 @@ export default {
 							</form-input>
 						</div>
 						<div class="col">
+							<form-input
+								type="datepicker"
+								v-model="formData.gueltig_von"
+								name="gueltig_von"
+								format="dd.MM.yyyy"
+								auto-apply
+								:enable-time-picker="false"
+								preview-format="dd.MM.yyyy"
+								model-type="yyyy-MM-dd"
+								:label="$p.t('global', 'gueltigVon')"
+							/>
+							<form-input
+								type="datepicker"
+								v-model="formData.gueltig_bis"
+								name="gueltig_bis"
+								format="dd.MM.yyyy"
+								auto-apply
+								:enable-time-picker="false"
+								preview-format="dd.MM.yyyy"
+								model-type="yyyy-MM-dd"
+								:label="$p.t('global', 'gueltigBis')"
+							/>
 							<form-input
 								type="checkbox"
 								v-model="formData.aktiv"

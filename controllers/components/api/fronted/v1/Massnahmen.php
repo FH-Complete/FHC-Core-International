@@ -54,7 +54,9 @@ class Massnahmen extends FHCAPI_Controller
 			beschreibung_mehrsprachig[(2)] as beschreibungeng,
 			ects,
 			aktiv,
-			einmalig'
+			einmalig,
+			gueltig_von,
+			gueltig_bis'
 		);
 
 		$this->_ci->InternatmassnahmeModel->addOrder('aktiv, ects', 'DESC');
@@ -66,9 +68,9 @@ class Massnahmen extends FHCAPI_Controller
 	{
 		$postJson = $this->_ci->input->post();
 		if ($postJson['massnahme_id'])
-			return $this->updateMassnahme($postJson);
+			$this->updateMassnahme($postJson);
 		else
-			return $this->addMassnahme($postJson);
+			$this->addMassnahme($postJson);
 	}
 	private function addMassnahme($postJson)
 	{
@@ -94,17 +96,22 @@ class Massnahmen extends FHCAPI_Controller
 		$beschreibungeng = str_replace(",", "\,", $beschreibungeng);
 		$beschreibungmehrsprachig = "{". $beschreibung. ", ". $beschreibungeng . "}";
 
-		$insert = $this->_ci->InternatmassnahmeModel->insert(array
-			(
-				'bezeichnung_mehrsprachig' => $bezeichnungmehrsprachig,
-				'beschreibung_mehrsprachig' => $beschreibungmehrsprachig,
-				'ects' => $ects,
-				'aktiv' => !is_null($aktiv),
-				'einmalig' => !is_null($einmalig),
-				'insertamum' => date('Y-m-d H:i:s'),
-				'insertvon' => $this->_uid
-			)
+		$insertArray = array(
+			'bezeichnung_mehrsprachig' => $bezeichnungmehrsprachig,
+			'beschreibung_mehrsprachig' => $beschreibungmehrsprachig,
+			'ects' => $ects,
+			'aktiv' => !is_null($aktiv),
+			'einmalig' => !is_null($einmalig),
+			'insertamum' => date('Y-m-d H:i:s'),
+			'insertvon' => $this->_uid,
 		);
+
+		if (array_key_exists('gueltig_von', $postJson))
+			$insertArray['gueltig_von'] = $postJson['gueltig_von'];
+
+		if (array_key_exists('gueltig_bis', $postJson))
+			$insertArray['gueltig_bis'] = $postJson['gueltig_bis'];
+		$insert = $this->_ci->InternatmassnahmeModel->insert($insertArray);
 
 		if (isError($insert))
 			$this->terminateWithError(getError($insert), self::ERROR_TYPE_GENERAL);
@@ -124,7 +131,9 @@ class Massnahmen extends FHCAPI_Controller
 			beschreibung_mehrsprachig[(2)] as beschreibungeng,
 			ects,
 			aktiv,
-			einmalig'
+			einmalig,
+			gueltig_von,
+			gueltig_bis'
 		);
 
 		$result = $this->_ci->InternatmassnahmeModel->loadWhere(array('massnahme_id' =>  $insert->retval));
@@ -156,18 +165,24 @@ class Massnahmen extends FHCAPI_Controller
 		$beschreibungeng = str_replace(",", "\,", $beschreibungeng);
 		$beschreibungmehrsprachig = "{". $beschreibung. ", ". $beschreibungeng . "}";
 
+		$updateArray = array('bezeichnung_mehrsprachig' => $bezeichnungmehrsprachig,
+							'beschreibung_mehrsprachig' => $beschreibungmehrsprachig,
+							'ects' => $ects,
+							'aktiv' => $aktiv,
+							'einmalig' => $einmalig,
+							'updateamum' => date('Y-m-d H:i:s'),
+							'updatevon' => $this->_uid);
+
+
+		if (array_key_exists('gueltig_von', $postJson))
+			$updateArray['gueltig_von'] = $postJson['gueltig_von'];
+
+		if (array_key_exists('gueltig_bis', $postJson))
+			$updateArray['gueltig_bis'] = $postJson['gueltig_bis'];
+
 		$insert = $this->_ci->InternatmassnahmeModel->update(
 			array('massnahme_id' => $massnahmeid),
-			array
-			(
-				'bezeichnung_mehrsprachig' => $bezeichnungmehrsprachig,
-				'beschreibung_mehrsprachig' => $beschreibungmehrsprachig,
-				'ects' => $ects,
-				'aktiv' => $aktiv,
-				'einmalig' => $einmalig,
-				'updateamum' => date('Y-m-d H:i:s'),
-				'updatevon' => $this->_uid
-			)
+			$updateArray
 		);
 
 

@@ -332,4 +332,24 @@ class Internatmassnahmezuordnung_model extends DB_Model
 		return $this->execReadOnlyQuery($query, array("confirmed", $student, 5));
 
 	}
+
+	public function checkIfExists($prestudent_id, $massnahme_id)
+	{
+		$query = 'SELECT
+						1
+					FROM extension.tbl_internat_massnahme_zuordnung zuordnung
+						JOIN extension.tbl_internat_massnahme massnahme ON zuordnung.massnahme_id = massnahme.massnahme_id
+						JOIN extension.tbl_internat_massnahme_zuordnung_status zstatus ON zuordnung.massnahme_zuordnung_id = zstatus.massnahme_zuordnung_id
+						JOIN tbl_prestudent ON zuordnung.prestudent_id = tbl_prestudent.prestudent_id
+					WHERE zuordnung.prestudent_id = ?
+						AND zstatus.massnahme_zuordnung_status_id = (
+							SELECT MAX(sub_zstatus.massnahme_zuordnung_status_id)
+							FROM extension.tbl_internat_massnahme_zuordnung_status sub_zstatus
+							WHERE sub_zstatus.massnahme_zuordnung_id = zuordnung.massnahme_zuordnung_id
+						)
+					AND massnahme.massnahme_id = ?
+					AND zstatus.massnahme_status_kurzbz != ?';
+		return $this->execReadOnlyQuery($query, array($prestudent_id, $massnahme_id, "declined"));
+
+	}
 }

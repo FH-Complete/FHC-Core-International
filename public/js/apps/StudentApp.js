@@ -1,9 +1,6 @@
-import fhcapifactory from "../api/fhcapifactory.js";
 import Student from "../components/StudentComponent.js";
-import Phrasen from '../../../../js/plugin/Phrasen.js';
-import FhcAlert from '../../../../js/plugins/FhcAlert.js';
-
-Vue.$fhcapi = (Vue?.$fhcapi === undefined) ? fhcapifactory : {...Vue.$fhcapi, ...fhcapifactory};
+import Phrasen from '../../../../js/plugins/Phrasen.js';
+import Api from '../../../../js/plugins/Api.js';
 
 const studentApp = Vue.createApp({
 	components: {
@@ -14,4 +11,5 @@ const studentApp = Vue.createApp({
 studentApp
 	.use(primevue.config.default)
 	.use(Phrasen)
+	.use(Api)
 	.mount("#main");

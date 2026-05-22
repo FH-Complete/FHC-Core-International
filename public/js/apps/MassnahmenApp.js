@@ -1,9 +1,7 @@
-import fhcapifactory from "../api/fhcapifactory.js";
 import Massnahmen from "../components/MassnahmenComponent.js";
-import Phrasen from '../../../../js/plugin/Phrasen.js';
-import FhcAlert from '../../../../js/plugins/FhcAlert.js';
+import Phrasen from '../../../../js/plugins/Phrasen.js';
+import Api from '../../../../js/plugins/Api.js';
 
-Vue.$fhcapi = fhcapifactory;
 const massnahmenApp = Vue.createApp({
 	components: {
 		Massnahmen,
@@ -13,4 +11,5 @@ const massnahmenApp = Vue.createApp({
 massnahmenApp
 	.use(primevue.config.default)
 	.use(Phrasen)
+	.use(Api)
 	.mount("#main");

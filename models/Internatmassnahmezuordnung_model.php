@@ -240,7 +240,8 @@ class Internatmassnahmezuordnung_model extends DB_Model
 				letztes_studiensemester AS (
 					SELECT DISTINCT ON (prestudent.prestudent_id)
 						prestudent.prestudent_id,
-						ps.studiensemester_kurzbz
+						ps.studiensemester_kurzbz,
+						ps.ausbildungssemester
 					FROM tbl_prestudent prestudent
 						JOIN tbl_prestudentstatus ps ON prestudent.prestudent_id = ps.prestudent_id
 					WHERE studiengang_kz = ?
@@ -256,8 +257,9 @@ class Internatmassnahmezuordnung_model extends DB_Model
 					LEFT JOIN campus.tbl_lvgesamtnote lvgesamtnote ON lvgesamtnote.student_uid = student_ects.student_uid AND lvgesamtnote.lehrveranstaltung_id IN (SELECT lehrveranstaltung_id FROM gefilterte_lehrveranstaltung)
 				WHERE
 					get_rolle_prestudent(student_ects.prestudent_id, NULL) IN ?
+					AND sg.max_semester = lss.ausbildungssemester
+					AND slv.studiensemester_kurzbz = ?
 					AND sg.max_semester = slv.semester
-					AND lss.studiensemester_kurzbz = ?
 				GROUP BY
 					student_ects.student_uid,
 					lvgesamtnote.student_uid;';

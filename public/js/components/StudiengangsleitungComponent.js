@@ -4,6 +4,7 @@ import BsModal from '../../../../js/components/Bootstrap/Modal.js';
 import FormInput from "../../../../js/components/Form/Input.js";
 import FhcLoader from '../../../../js/components/Loader.js';
 import ApiStudiengangsleitung from '../api/studiengangsleitung.js';
+import { dateFilter } from "../../../../js/tabulator/filters/Dates.js";
 
 export default {
 	name: 'Studiengangsleitung',
@@ -73,6 +74,7 @@ export default {
 			selectedOrgform: "",
 			orgformen: "",
 			filteredUids: [],
+			fullGroupDataMap: null,
 			tabulatorEventHandler: [
 				{
 					event: "rowClick",
@@ -81,6 +83,12 @@ export default {
 							e.stopPropagation();
 							row.deselect();
 						}
+					}
+				},
+				{
+					event: "dataLoaded",
+					handler: (e, row) => {
+						this.fullGroupDataMap = null;
 					}
 				}
 			],
@@ -119,10 +127,26 @@ export default {
 				selectableCheck: (row) => {
 					return row.getData().massnahme_status_kurzbz === this.selectableStatus;
 				},
-				groupHeader: function(value, count, data, group)
+				groupHeader: (value, count, data) =>
 				{
+					if (!this.fullGroupDataMap)
+					{
+						this.fullGroupDataMap = new Map();
+						let allData = this.$refs.massnahmenTable.tabulator.getData();
+						allData.forEach(item => {
+							if (!this.fullGroupDataMap.has(item.student_uid))
+							{
+								this.fullGroupDataMap.set(item.student_uid, []);
+							}
+							this.fullGroupDataMap.get(item.student_uid).push(item);
+						});
+					}
+
+					let fullGroupData = this.fullGroupDataMap.get(value) || [];
+
 					let sum = 0;
-					data.forEach(function(item) {
+					fullGroupData.forEach(function(item)
+					{
 						if (item.massnahme_status_kurzbz === 'confirmed')
 						{
 							sum += parseInt(item.ects);
@@ -130,15 +154,15 @@ export default {
 					});
 
 					let color = '';
-					if (data.some(item => item.massnahme_status_kurzbz === null) || data.some(item => item.massnahme_status_kurzbz === "declined"))
+					if (fullGroupData.some(item => item.massnahme_status_kurzbz === null) || fullGroupData.some(item => item.massnahme_status_kurzbz === "declined"))
 						color = 'red';
-					if (data.some(item => item.massnahme_status_kurzbz === "confirmed") && sum < 5)
+					if (fullGroupData.some(item => item.massnahme_status_kurzbz === "confirmed") && sum < 5)
 						color = 'greenyellow';
-					if (data.some(item => item.massnahme_status_kurzbz === "accepted"))
+					if (fullGroupData.some(item => item.massnahme_status_kurzbz === "accepted"))
 						color = "yellow";
-					if (data.some(item => item.massnahme_status_kurzbz === "planned") || data.some(item => item.massnahme_status_kurzbz === "performed"))
+					if (fullGroupData.some(item => item.massnahme_status_kurzbz === "planned") || fullGroupData.some(item => item.massnahme_status_kurzbz === "performed"))
 						color = 'orange';
-					if (data.some(item => item.massnahme_status_kurzbz === "confirmed") && sum >= 5)
+					if (fullGroupData.some(item => item.massnahme_status_kurzbz === "confirmed") && sum >= 5)
 						color = "green";
 
 					let outerDiv = document.createElement('div');
@@ -146,19 +170,21 @@ export default {
 					outerDiv.style.alignItems = 'center';
 
 					let innerDiv = document.createElement('div');
-					innerDiv.classList.add(color);
+					if (color)
+						innerDiv.classList.add(color);
 					innerDiv.style.width = '50px';
 					innerDiv.style.height = '20px';
 					innerDiv.style.marginRight = '10px';
 					innerDiv.style.display = 'inline-flex';
 
 					outerDiv.appendChild(innerDiv);
-					let textContent = document.createTextNode(data[0].vorname + " " + data[0].nachname + " (" + value + ") ");
+
+					const userInfo = fullGroupData[0] ? `${fullGroupData[0].vorname} ${fullGroupData[0].nachname}` : '';
+					const textContent = document.createTextNode(`${userInfo} (${value}) `);
 					outerDiv.appendChild(textContent);
 
 					return outerDiv;
 				},
-
 				columns: [
 					{title: this.$p.t('lehre', 'studiengang'), field: 'studiengang_kurz', headerFilter: true},
 					{title: this.$p.t('lehre', 'organisationsform'), field: 'orgform', headerFilter: true},
@@ -284,6 +310,24 @@ export default {
 						}
 					},
 					{title: this.$p.t('lehre', 'studiensemester'), field: 'student_studiensemester', headerFilter: true},
+					{title: this.$p.t('global', 'datum'), field: 'datum',
+						headerFilterFunc: 'dates',
+						headerFilter: dateFilter,
+						formatter: (cell) =>
+						{
+							let val = cell.getValue();
+							if (!val)
+								return '&nbsp;';
+
+								let date = new Date(val);
+
+								return date.toLocaleDateString('de-AT', {
+									year: "numeric",
+									month: "2-digit",
+									day: "2-digit",
+								});
+						}
+					},
 					{
 						title: this.$p.t('global', 'kontakt'),
 						field: 'kontakt',
@@ -461,7 +505,8 @@ export default {
 							'status_bezeichnung' : response.status_bezeichnung,
 							'akzeptieren': response.status,
 							'massnahme_akzeptieren': response.status,
-							'anmerkung_stgl' : response.anmerkung_stgl
+							'anmerkung_stgl' : response.anmerkung_stgl,
+							'datum': Date.now()
 						},
 					).then(() => {
 						this.$refs.massnahmenTable.tabulator.rowManager.refreshActiveData();
@@ -782,6 +827,14 @@ export default {
 		{
 			this.$refs.massnahmenTable.tabulator.setGroupStartOpen(false);
 		},
+		showAllFromStudent()
+		{
+			const table = this.$refs.massnahmenTable.tabulator;
+			const filteredRows = table.getRows("active");
+			const student_ids = [...new Set(filteredRows.map(row => row.getData().student_uid))];
+
+			this.$refs.massnahmenTable.tabulator.setFilter("student_uid", "in", student_ids);
+		},
 	},
 
 	template: `
@@ -934,6 +987,7 @@ export default {
 				<div class="row">
 					<div class="col-md-6 d-flex gap-2">
 						<button @click="collapseGroup" class="btn btn-outline-secondary" type="button"><i id="togglegroup" class="fa-solid fa-minimize"></i></button>
+						<button @click="showAllFromStudent" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'personenMassnahmen')"><i class="fa-solid fa-user-plus"></i></button>
 						<button @click="selectAll" class="btn btn-outline-secondary" type="button"> {{ $p.t('international', 'alleGeplantenMarkieren') }} </button>
 						<button v-if="!readonly"  @click="acceptAll" class="btn btn-outline-secondary" type="button"> {{ $p.t('international', 'alleAkzeptierenPlan') }} </button>
 						<button @click="sendMail" class="btn btn-outline-secondary" type="button" :title="$p.t('international', 'mailButton')"> {{ $p.t('international', 'mailversenden') }} </button>

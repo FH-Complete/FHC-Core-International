@@ -124,6 +124,12 @@ class Internatmassnahmezuordnung_model extends DB_Model
 			status.bezeichnung_mehrsprachig['.$language.'] AS "status_bezeichnung",
 			status.massnahme_status_kurzbz,
 			zuordnung.anmerkung,
+			(
+				SELECT datum
+				FROM extension.tbl_internat_massnahme_zuordnung_status
+				WHERE tbl_internat_massnahme_zuordnung_status.massnahme_zuordnung_id = zuordnung.massnahme_zuordnung_id
+				ORDER BY massnahme_zuordnung_status_id DESC LIMIT 1
+			) as datum,
 			zuordnung.anmerkung_stgl as anmerkung_stgl,
 			zuordnung.studiensemester_kurzbz AS "studiensemester",
 			zuordnung.dms_id AS "document",
@@ -240,8 +246,7 @@ class Internatmassnahmezuordnung_model extends DB_Model
 				letztes_studiensemester AS (
 					SELECT DISTINCT ON (prestudent.prestudent_id)
 						prestudent.prestudent_id,
-						ps.studiensemester_kurzbz,
-						ps.ausbildungssemester
+						ps.studiensemester_kurzbz
 					FROM tbl_prestudent prestudent
 						JOIN tbl_prestudentstatus ps ON prestudent.prestudent_id = ps.prestudent_id
 					WHERE studiengang_kz = ?

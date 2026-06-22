@@ -37,6 +37,11 @@ DO $$
     EXCEPTION WHEN OTHERS THEN NULL;
 END $$;
 
+DO $$
+    BEGIN
+        CREATE INDEX idx_status_massnahme_zuordnung_id ON extension.tbl_internat_massnahme_zuordnung_status USING btree (massnahme_zuordnung_id);
+    EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
 
 GRANT SELECT, UPDATE, INSERT, DELETE ON TABLE extension.tbl_internat_massnahme_zuordnung_status TO vilesci;
 GRANT SELECT, UPDATE, INSERT, DELETE ON TABLE extension.tbl_internat_massnahme_zuordnung_status TO fhcomplete;

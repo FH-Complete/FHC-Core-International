@@ -27,6 +27,7 @@ export default {
 			editMode: null,
 			phrasesLoaded: null,
 			sideMenuEntries: {},
+			tabulatorEventHandler: []
 		}
 	},
 	computed: {
@@ -199,7 +200,6 @@ export default {
 				:tabulator-events="tabulatorEventHandler"
 				@nw-new-entry="newSideMenuEntryHandler"
 				:table-only=true
-				:hideTopMenu=false
 				new-btn-label="Massnahme"
 				new-btn-show
 				@click:new="showMassnahmeContainer"></core-filter-cmpt>

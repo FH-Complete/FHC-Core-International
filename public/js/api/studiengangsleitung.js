@@ -1,4 +1,4 @@
-import {CoreRESTClient} from "../../../../../public/js/RESTClient";
+import {CoreRESTClient} from "../../../../js/RESTClient.js";
 
 export default {
 	setStatus(data)

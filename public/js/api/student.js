@@ -1,4 +1,4 @@
-import {CoreRESTClient} from "../../../../../public/js/RESTClient";
+import {CoreRESTClient} from "../../../../js/RESTClient.js";
 
 export default {
 
@@ -29,7 +29,7 @@ export default {
 	uploadNachweis(data)
 	{
 		try {
-			return CoreRESTClient.post('/extensions/FHC-Core-International/Student/studentAddNachweis', data, {Headers: { "Content-Type": "multipart/form-data" }});
+			return CoreRESTClient.post('/extensions/FHC-Core-International/Student/studentAddNachweis', data, {Headers: { "Content-Type": "multipart/form-data" }, timeout: 300000});
 		} catch (error) {
 			throw error;
 		}

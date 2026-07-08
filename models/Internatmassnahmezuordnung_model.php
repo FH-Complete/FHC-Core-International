@@ -246,7 +246,8 @@ class Internatmassnahmezuordnung_model extends DB_Model
 				letztes_studiensemester AS (
 					SELECT DISTINCT ON (prestudent.prestudent_id)
 						prestudent.prestudent_id,
-						ps.studiensemester_kurzbz
+						ps.studiensemester_kurzbz,
+						ps.ausbildungssemester
 					FROM tbl_prestudent prestudent
 						JOIN tbl_prestudentstatus ps ON prestudent.prestudent_id = ps.prestudent_id
 					WHERE studiengang_kz = ?

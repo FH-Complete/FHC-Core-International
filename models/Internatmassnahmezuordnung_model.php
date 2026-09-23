@@ -124,6 +124,12 @@ class Internatmassnahmezuordnung_model extends DB_Model
 			status.bezeichnung_mehrsprachig['.$language.'] AS "status_bezeichnung",
 			status.massnahme_status_kurzbz,
 			zuordnung.anmerkung,
+			(
+				SELECT datum
+				FROM extension.tbl_internat_massnahme_zuordnung_status
+				WHERE tbl_internat_massnahme_zuordnung_status.massnahme_zuordnung_id = zuordnung.massnahme_zuordnung_id
+				ORDER BY massnahme_zuordnung_status_id DESC LIMIT 1
+			) as datum,
 			zuordnung.anmerkung_stgl as anmerkung_stgl,
 			zuordnung.studiensemester_kurzbz AS "studiensemester",
 			zuordnung.dms_id AS "document",
@@ -240,7 +246,8 @@ class Internatmassnahmezuordnung_model extends DB_Model
 				letztes_studiensemester AS (
 					SELECT DISTINCT ON (prestudent.prestudent_id)
 						prestudent.prestudent_id,
-						ps.studiensemester_kurzbz
+						ps.studiensemester_kurzbz,
+						ps.ausbildungssemester
 					FROM tbl_prestudent prestudent
 						JOIN tbl_prestudentstatus ps ON prestudent.prestudent_id = ps.prestudent_id
 					WHERE studiengang_kz = ?
@@ -256,8 +263,9 @@ class Internatmassnahmezuordnung_model extends DB_Model
 					LEFT JOIN campus.tbl_lvgesamtnote lvgesamtnote ON lvgesamtnote.student_uid = student_ects.student_uid AND lvgesamtnote.lehrveranstaltung_id IN (SELECT lehrveranstaltung_id FROM gefilterte_lehrveranstaltung)
 				WHERE
 					get_rolle_prestudent(student_ects.prestudent_id, NULL) IN ?
+					AND sg.max_semester = lss.ausbildungssemester
+					AND slv.studiensemester_kurzbz = ?
 					AND sg.max_semester = slv.semester
-					AND lss.studiensemester_kurzbz = ?
 				GROUP BY
 					student_ects.student_uid,
 					lvgesamtnote.student_uid;';
@@ -330,6 +338,26 @@ class Internatmassnahmezuordnung_model extends DB_Model
 			HAVING SUM(massnahme.ects) >= ?';
 
 		return $this->execReadOnlyQuery($query, array("confirmed", $student, 5));
+
+	}
+
+	public function checkIfExists($prestudent_id, $massnahme_id)
+	{
+		$query = 'SELECT
+						1
+					FROM extension.tbl_internat_massnahme_zuordnung zuordnung
+						JOIN extension.tbl_internat_massnahme massnahme ON zuordnung.massnahme_id = massnahme.massnahme_id
+						JOIN extension.tbl_internat_massnahme_zuordnung_status zstatus ON zuordnung.massnahme_zuordnung_id = zstatus.massnahme_zuordnung_id
+						JOIN tbl_prestudent ON zuordnung.prestudent_id = tbl_prestudent.prestudent_id
+					WHERE zuordnung.prestudent_id = ?
+						AND zstatus.massnahme_zuordnung_status_id = (
+							SELECT MAX(sub_zstatus.massnahme_zuordnung_status_id)
+							FROM extension.tbl_internat_massnahme_zuordnung_status sub_zstatus
+							WHERE sub_zstatus.massnahme_zuordnung_id = zuordnung.massnahme_zuordnung_id
+						)
+					AND massnahme.massnahme_id = ?
+					AND zstatus.massnahme_status_kurzbz != ?';
+		return $this->execReadOnlyQuery($query, array($prestudent_id, $massnahme_id, "declined"));
 
 	}
 }

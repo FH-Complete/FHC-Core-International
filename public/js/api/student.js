@@ -1,45 +1,52 @@
-import {CoreRESTClient} from "../../../../../public/js/RESTClient.js";
-
 export default {
+
+	getNachweis(massnahme)
+	{
+		return ('extensions/FHC-Core-International/Student/studentDownloadNachweis?massnahmenZuordnung=' + encodeURIComponent(massnahme));
+	},
+
+	getData()
+	{
+		return {
+			method: 'get',
+			url: 'extensions/FHC-Core-International/components/api/fronted/v1/Student/getData'
+		};
+	},
+
+	uploadNachweis(data)
+	{
+		return {
+			method: 'post',
+			url: 'extensions/FHC-Core-International/components/api/fronted/v1/Student/studentAddNachweis',
+			params: data,
+			headers: {"Content-Type": "multipart/form-data"}
+		};
+	},
 
 	deleteMassnahme(data)
 	{
-		try {
-			return CoreRESTClient.post('/extensions/FHC-Core-International/Student/studentDeleteMassnahme', data);
-		} catch (error) {
-			throw error;
-		}
+		return {
+			method: 'post',
+			url: 'extensions/FHC-Core-International/components/api/fronted/v1/Student/studentDeleteMassnahme',
+			params: data,
+		};
 	},
-	getData()
-	{
-		try {
-			return CoreRESTClient.get('/extensions/FHC-Core-International/Student/getData');
-		} catch (error) {
-			throw error;
-		}
-	},
+
 	addMassnahme(data)
 	{
-		try {
-			return CoreRESTClient.post('/extensions/FHC-Core-International/Student/studentAddMassnahme', data);
-		} catch (error) {
-			throw error;
-		}
+		return {
+			method: 'post',
+			url: 'extensions/FHC-Core-International/components/api/fronted/v1/Student/studentAddMassnahme',
+			params: data,
+		};
 	},
-	uploadNachweis(data)
-	{
-		try {
-			return CoreRESTClient.post('/extensions/FHC-Core-International/Student/studentAddNachweis', data, {Headers: { "Content-Type": "multipart/form-data" }, timeout: 300000});
-		} catch (error) {
-			throw error;
-		}
-	},
+
 	deleteNachweis(data)
 	{
-		try {
-			return CoreRESTClient.post('/extensions/FHC-Core-International/Student/studentDeleteNachweis', data);
-		} catch (error) {
-			throw error;
-		}
-	}
+		return {
+			method: 'post',
+			url: 'extensions/FHC-Core-International/components/api/fronted/v1/Student/studentDeleteNachweis',
+			params: data,
+		};
+	},
 };

@@ -12,6 +12,12 @@ $this->load->view(
 		'phrases' => array(
 			'international',
 		),
+		'customCSSs' => [
+			'public/css/components/vue-datepicker.css',
+		],
+		'customJSs' => array(
+			'vendor/vuejs/vuedatepicker_js/vue-datepicker.iife.js',
+		),
 		'customJSModules' => array(
 			'public/extensions/FHC-Core-International/js/apps/MassnahmenApp.js',
 		)

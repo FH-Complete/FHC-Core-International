@@ -1,9 +1,7 @@
 import Studiengangsleitung from "../components/StudiengangsleitungComponent.js";
-import Phrasen from '../../../../js/plugin/Phrasen.js';
-import FhcAlert from '../../../../js/plugins/FhcAlert.js';
-import fhcapifactory from "../api/fhcapifactory.js";
+import Phrasen from '../../../../js/plugins/Phrasen.js';
+import Api from '../../../../js/plugins/Api.js';
 
-Vue.$fhcapi = fhcapifactory;
 const studiengangsleitungApp = Vue.createApp({
 	components: {
 		Studiengangsleitung,
@@ -14,4 +12,5 @@ const studiengangsleitungApp = Vue.createApp({
 studiengangsleitungApp
 	.use(primevue.config.default)
 	.use(Phrasen)
+	.use(Api)
 	.mount("#main");

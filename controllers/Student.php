@@ -2,7 +2,6 @@
 
 class Student extends Auth_Controller
 {
-
 	private $_ci; // Code igniter instance
 	private $_uid;
 	private $language;
@@ -15,37 +14,26 @@ class Student extends Auth_Controller
 	{
 		parent::__construct(array(
 				'index' => self::BERECHTIGUNG_KURZBZ .':rw',
-				'studentAddMassnahme' => self::BERECHTIGUNG_KURZBZ .':rw',
-				'studentDeleteNachweis' => self::BERECHTIGUNG_KURZBZ .':rw',
-				'studentDeleteMassnahme' => self::BERECHTIGUNG_KURZBZ .':rw',
-				'studentAddNachweis' => self::BERECHTIGUNG_KURZBZ .':rw',
 				'studentDownloadNachweis' => self::BERECHTIGUNG_KURZBZ .':rw',
-				'getData' => self::BERECHTIGUNG_KURZBZ .':rw',
 			)
 		);
 
 		$this->_ci =& get_instance();
 		$this->loadPhrases(
 			array(
-				'lehre',
 				'ui',
 				'international',
-				'global'
-
 			)
 		);
 
 		$this->load->library('WidgetLib');
 		$this->load->library('AkteLib');
 		$this->load->library('DmsLib');
+
 		$this->_ci->load->model('extensions/FHC-Core-International/Internatmassnahme_model', 'InternatmassnahmeModel');
 		$this->_ci->load->model('extensions/FHC-Core-International/Internatmassnahmezuordnung_model', 'InternatmassnahmezuordnungModel');
-		$this->_ci->load->model('extensions/FHC-Core-International/Internatmassnahmezuordnungstatus_model', 'InternatmassnahmezuordnungstatusModel');
 		$this->_ci->load->model('crm/Student_model', 'StudentModel');
 		$this->_ci->load->model('organisation/Studiensemester_model', 'StudiensemesterModel');
-		$this->_ci->load->model('system/Sprache_model', 'SpracheModel');
-
-		$this->load->helper('form');
 
 		$this->_ci->load->config('extensions/FHC-Core-International/international');
 
@@ -53,7 +41,6 @@ class Student extends Auth_Controller
 		$this->_setAuthUID();
 
 		$this->language = getUserLanguage() === 'German' ? '0' : '1';
-
 	}
 
 	public function index()
@@ -62,7 +49,7 @@ class Student extends Auth_Controller
 		$student = $this->_ci->StudentModel->loadWhere(array('student_uid' => $this->_uid));
 
 		if (isError($student))
-			$this->terminateWithJsonError(getError($student));
+			show_error(getError($student));
 
 		if (!hasData($student))
 			show_error($this->_ci->p->t('international', 'nurBachelor'));
@@ -72,14 +59,33 @@ class Student extends Auth_Controller
 			show_error($this->_ci->p->t('international', 'nurBachelor'));
 
 		$this->_ci->InternatmassnahmeModel->addOrder('ects');
-		$this->_ci->InternatmassnahmeModel->addSelect('massnahme_id,
-														ects,
-														array_to_json(bezeichnung_mehrsprachig::varchar[])->>'.$this->language.' as bezeichnung,
-														array_to_json(beschreibung_mehrsprachig::varchar[])->>'.$this->language.' as beschreibung');
+		$this->_ci->InternatmassnahmeModel->addSelect(
+			'massnahme_id,
+			ects,
+			einmalig,
+			array_to_json(bezeichnung_mehrsprachig::varchar[])->>'.$this->language.' as bezeichnung,
+			array_to_json(beschreibung_mehrsprachig::varchar[])->>'.$this->language.' as beschreibung'
+		);
+
+		$this->_ci->InternatmassnahmeModel->db->group_start();
+		$this->_ci->InternatmassnahmeModel->db->where('gueltig_von <=', date('Y-m-d'));
+		$this->_ci->InternatmassnahmeModel->db->or_where('gueltig_von IS NULL');
+		$this->_ci->InternatmassnahmeModel->db->group_end();
+
+		$this->_ci->InternatmassnahmeModel->db->group_start();
+		$this->_ci->InternatmassnahmeModel->db->where('gueltig_bis >=', date('Y-m-d'));
+		$this->_ci->InternatmassnahmeModel->db->or_where('gueltig_bis IS NULL');
+		$this->_ci->InternatmassnahmeModel->db->group_end();
+
+		if (isset($this->_ci->config->item('stg_massnahmen_blacklist')[$student->studiengang_kz]))
+		{
+			$this->_ci->InternatmassnahmeModel->db->where_not_in('massnahme_id', $this->_ci->config->item('stg_massnahmen_blacklist')[$student->studiengang_kz]);
+		}
+
 		$massnahmen = $this->_ci->InternatmassnahmeModel->loadWhere(array('aktiv' => true));
 
 		if (isError($massnahmen))
-			$this->terminateWithJsonError(getError($massnahmen));
+			show_error(getError($massnahmen));
 
 		$massnahmen = getData($massnahmen);
 
@@ -95,7 +101,7 @@ class Student extends Auth_Controller
 		));
 
 		if (isError($ausbildungssemester))
-			$this->terminateWithJsonError(getError($ausbildungssemester));
+			show_error(getError($ausbildungssemester));
 
 		$ausbildungssemester = getData($ausbildungssemester)[0]->ausbildungssemester;
 
@@ -104,18 +110,20 @@ class Student extends Auth_Controller
 		$maxsemester = $this->_ci->StudentModel->load(array('student_uid' => $this->_uid));
 
 		if (isError($maxsemester))
-			$this->terminateWithJsonError(getError($maxsemester));
+			show_error(getError($maxsemester));
 
 		$maxsemester = getData($maxsemester)[0]->max_semester;
 
 		$diff = $maxsemester - $ausbildungssemester;
 
-		$aktSemester = $this->_ci->StudiensemesterModel->getAktOrNextSemester();
+		$aktSemester = $this->_ci->StudiensemesterModel->getAkt();
+		if (!hasData($aktSemester))
+			$aktSemester = $this->_ci->StudiensemesterModel->getNext();
 		$this->_ci->StudiensemesterModel->addLimit($diff + 1);
 		$this->_ci->StudiensemesterModel->addOrder('start');
 		$studiensemester = $this->_ci->StudiensemesterModel->loadWhere(array('start >=' => getData($aktSemester)[0]->start));
 		if (isError($studiensemester))
-			$this->terminateWithJsonError(getError($studiensemester));
+			show_error(getError($studiensemester));
 
 		$studiensemester = getData($studiensemester);
 
@@ -133,6 +141,7 @@ class Student extends Auth_Controller
 		$language =  hasData($result) ? getData($result)[0]->index : 1;
 		$this->outputJsonSuccess($this->_ci->InternatmassnahmezuordnungModel->getDataStudent($this->_uid, $language));
 	}
+
 	public function studentAddMassnahme()
 	{
 		$postJson = $this->getPostJSON();
@@ -352,17 +361,17 @@ class Student extends Auth_Controller
 		$student = $this->_ci->StudentModel->loadWhere(array('student_uid' => $this->_uid));
 
 		if (isError($student))
-			$this->terminateWithJsonError(getError($student));
+			show_error(getError($student));
 
 		$student = getData($student)[0];
 
 		$massnahmenZuordnung = $this->_ci->InternatmassnahmezuordnungModel->getMassnahmenWithZuordnung($student->prestudent_id, $massnahmenZuordnungID);
 
 		if (isError($massnahmenZuordnung))
-			$this->terminateWithJsonError(getError($massnahmenZuordnung));
+			show_error(getError($massnahmenZuordnung));
 
 		if (!hasData($massnahmenZuordnung))
-			$this->terminateWithJsonError($this->_ci->p->t('ui', 'fehlerBeimLesen'));
+			show_error($this->_ci->p->t('ui', 'fehlerBeimLesen'));
 
 		return getData($massnahmenZuordnung)[0];
 	}
@@ -397,7 +406,7 @@ class Student extends Auth_Controller
 		$massnahmenZuordnungGet = $this->_ci->input->get('massnahmenZuordnung');
 
 		if (isEmptyString($massnahmenZuordnungGet))
-			$this->terminateWithJsonError($this->_ci->p->t('ui', 'errorFelderFehlen'));
+			show_error($this->_ci->p->t('ui', 'fehlerBeimLesen'));
 
 		$massnahmenZuordnung = $this->_checkMassnahmenZuordnung($massnahmenZuordnungGet);
 
@@ -416,3 +425,4 @@ class Student extends Auth_Controller
 		if (!$this->_uid) show_error('User authentification failed');
 	}
 }
+

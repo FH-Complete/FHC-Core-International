@@ -1,21 +1,29 @@
-import {CoreRESTClient} from "../../../../../public/js/RESTClient.js";
 
 export default {
+	getLoad()
+	{
+		return {
+			method: 'get',
+			url: 'extensions/FHC-Core-International/components/api/fronted/v1/Massnahmen/load/'
+		};
+	},
+
 	handleSave(data)
 	{
-		try {
-			return CoreRESTClient.post('/extensions/FHC-Core-International/Massnahmen/handleSave', data);
-		} catch (error) {
-			throw error;
-		}
+		return {
+			method: 'post',
+			url: 'extensions/FHC-Core-International/components/api/fronted/v1/Massnahmen/handleSave/',
+			params: data
+		};
 	},
+
 	deleteMassnahme(data)
 	{
-		try {
-			return CoreRESTClient.post('/extensions/FHC-Core-International/Massnahmen/deleteMassnahme', data);
-		} catch (error) {
-			throw error;
-		}
+		return {
+			method: 'post',
+			url: 'extensions/FHC-Core-International/components/api/fronted/v1/Massnahmen/deleteMassnahme/',
+			params: data
+		};
 	},
 
 };
